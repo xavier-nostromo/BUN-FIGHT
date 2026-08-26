@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BUN-FIGHT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body class="bg-amber-50 text-slate-800 min-h-screen font-sans flex flex-col items-center p-4">
+
+    <!-- Header / Nav -->
+    <header class="w-full max-w-2xl bg-amber-900 text-white p-4 rounded-xl shadow-lg flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-black tracking-wider">🥯 BUN-FIGHT 🥐</h1>
+            <p id="display-my-name" class="text-xs text-amber-200 mt-0.5 font-medium"></p>
+        </div>
+        <div class="flex gap-2">
+            <button id="btn-player-view" onclick="switchView('player')" class="bg-amber-700 px-3 py-1 rounded text-sm font-semibold">Player</button>
+            <button id="btn-host-view" onclick="switchView('host')" class="bg-amber-800 px-3 py-1 rounded text-sm font-semibold opacity-75">Host View</button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="w-full max-w-2xl">
+
+        <!-- SCREEN: Join Game -->
+        <div id="screen-join" class="bg-white p-6 rounded-2xl shadow-md border border-amber-200 text-center">
+            <h2 class="text-xl font-bold text-amber-900 mb-2">Enter the Arena</h2>
+            <p class="text-sm text-slate-500 mb-4">Choose your nickname to join the queue and challenge the champion.</p>
+            <form onsubmit="joinGame(event)" class="flex flex-col gap-3 max-w-xs mx-auto">
+                <input type="text" id="nickname" placeholder="Enter Nickname..." required maxlength="20" class="border-2 border-amber-300 p-2.5 rounded-lg focus:outline-none focus:border-amber-600 text-center font-bold text-slate-700">
+                <p id="join-error" class="hidden text-red-600 text-xs font-semibold"></p>
+                <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">Join Matchmaking</button>
+            </form>
+        </div>
+
+        <!-- SCREEN: Dashboard -->
+        <div id="screen-dashboard" class="hidden space-y-6">
+
+            <!-- PLAYER VIEW -->
+            <div id="view-player" class="space-y-4">
+                
+                <!-- Status Banner -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-amber-200 text-center">
+                    <h3 id="player-status-title" class="text-xl font-extrabold text-amber-900">Waiting...</h3>
+                    <p id="player-status-desc" class="text-xs text-slate-500 mt-1">Checking arena status...</p>
+                    
+                    <!-- Start Match Manual Trigger -->
+                    <div id="start-match-container" class="hidden mt-3">
+                        <button onclick="socket.emit('start_match_manual')" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors shadow">
+                            🚀 Start Match Now
+                        </button>
+                    </div>
+
+                    <div class="flex justify-center gap-6 mt-4 pt-3 border-t border-slate-100 text-xs">
+                        <div>
+                            <span class="text-slate-400 block uppercase font-bold">Your Streak</span>
+                            <span id="my-streak" class="text-lg font-black text-amber-600">0</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block uppercase font-bold">Your ESP Rating</span>
+                            <span id="my-esp" class="text-lg font-black text-indigo-600">100</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Battle Controls (Visible when active player) -->
+                <div id="battle-controls" class="hidden bg-white p-5 rounded-xl shadow-md border-2 border-amber-400 text-center space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span id="match-score-display" class="text-xs font-bold bg-amber-100 text-amber-800 px-3 py-1 rounded-full">Round 1 | Best of 3</span>
+                        <span id="choice-status-badge" class="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm">Make your move!</span>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3 pt-2">
+                        <button onclick="makeChoice('BUN')" class="choice-btn bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 p-4 rounded-xl flex flex-col items-center gap-1 transition-all">
+                            <span class="text-3xl">🥯</span>
+                            <span class="font-extrabold text-amber-900 text-xs">BUN</span>
+                        </button>
+                        <button onclick="makeChoice('CROISSANT')" class="choice-btn bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 p-4 rounded-xl flex flex-col items-center gap-1 transition-all">
+                            <span class="text-3xl">🥐</span>
+                            <span class="font-extrabold text-amber-900 text-xs">CROISSANT</span>
+                        </button>
+                        <button onclick="makeChoice('TORTILLA')" class="choice-btn bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 p-4 rounded-xl flex flex-col items-center gap-1 transition-all">
+                            <span class="text-3xl">🫓</span>
+                            <span class="font-extrabold text-amber-900 text-xs">TORTILLA</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HOST VIEW -->
+            <div id="view-host" class="hidden space-y-4">
+                
+                <!-- Champion Display -->
+                <div class="bg-gradient-to-r from-amber-600 to-amber-800 text-white p-5 rounded-xl shadow-md flex justify-between items-center">
+                    <div>
+                        <span class="text-xs uppercase tracking-wider text-amber-200 font-bold block">Current Champion</span>
+                        <h3 id="host-champ-name" class="text-2xl font-black">No Champion Yet</h3>
+                    </div>
+                    <span id="host-champ-streak" class="bg-amber-900/50 px-3 py-1.5 rounded-lg text-lg font-bold border border-amber-500/30">🔥 0</span>
+                </div>
+
+                <!-- Match Monitor -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <!-- Inactive Match State -->
+                    <div id="host-match-inactive" class="text-center py-6 text-slate-400 font-medium text-sm">
+                        Waiting for players to initiate a match...
+                    </div>
+
+                    <!-- Active Match State -->
+                    <div id="host-match-active" class="hidden space-y-4">
+                        <div class="grid grid-cols-2 gap-4 text-center">
+                            <div class="bg-amber-50 p-3 rounded-lg border border-amber-100">
+                                <span class="text-xs text-slate-400 font-bold block uppercase">Challenger</span>
+                                <div id="hm-challenger-name" class="font-extrabold text-slate-800 text-lg">---</div>
+                                <div id="hm-p1-status" class="mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold bg-amber-100 text-amber-700">🤔 Choosing...</div>
+                                <div id="hm-p1-pattern" class="text-xs text-red-500 font-bold mt-1"></div>
+                            </div>
+                            <div class="bg-amber-50 p-3 rounded-lg border border-amber-100">
+                                <span class="text-xs text-slate-400 font-bold block uppercase">Champion</span>
+                                <div id="hm-champ-name" class="font-extrabold text-slate-800 text-lg">---</div>
+                                <div id="hm-p2-status" class="mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold bg-amber-100 text-amber-700">🤔 Choosing...</div>
+                                <div id="hm-p2-pattern" class="text-xs text-red-500 font-bold mt-1"></div>
+                            </div>
+                        </div>
+
+                        <div class="text-center font-black text-2xl text-amber-900">
+                            <span id="hm-p1-wins">0</span> - <span id="hm-p2-wins">0</span>
+                        </div>
+
+                        <!-- Match Result Overlay Banner -->
+                        <div id="match-result-banner" class="hidden bg-amber-100 border-2 border-amber-400 p-3 rounded-lg text-center space-y-1">
+                            <div id="result-winner-text" class="font-extrabold text-amber-900 text-lg"></div>
+                            <div id="result-choices-display" class="text-xs text-amber-800 font-medium"></div>
+                        </div>
+
+                        <!-- Match History -->
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-400 uppercase mb-2">Round History</h4>
+                            <div id="host-history-list" class="space-y-1 max-h-36 overflow-y-auto text-xs"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Tools -->
+                <div class="flex justify-end">
+                    <button onclick="resetGame()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">Reset Game State</button>
+                </div>
+            </div>
+
+            <!-- Queue & Leaderboard Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Queue Panel -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="font-bold text-slate-700 text-sm">Matchmaking Queue</h4>
+                        <span id="queue-count" class="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-500 font-semibold">0 waiting</span>
+                    </div>
+                    <ul id="queue-list" class="space-y-1.5 max-h-48 overflow-y-auto">
+                        <li class="text-slate-400 text-sm text-center py-2">Queue is empty</li>
+                    </ul>
+                </div>
+
+                <!-- Leaderboard Panel -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <h4 class="font-bold text-slate-700 text-sm mb-3">ESP Leaderboard</h4>
+                    <ul id="leaderboard-list" class="space-y-1.5 max-h-48 overflow-y-auto">
+                        <li class="text-slate-400 text-sm text-center py-2">No psychic energy detected</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Reward Modal -->
+    <div id="reward-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-xs w-full p-6 text-center space-y-3 shadow-2xl">
+            <div id="reward-icon" class="text-5xl">👑</div>
+            <h3 id="reward-title" class="text-xl font-black text-amber-900">VICTORY!</h3>
+            <p id="reward-desc" class="text-xs text-slate-600"></p>
+            <div id="reward-bonus" class="inline-block bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full"></div>
+            <div>
+                <button onclick="closeRewardModal()" class="w-full mt-2 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-lg text-sm transition-colors">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Logic -->
+    <script>
+        const socket = io();
+        let currentSid = null;
+        let myName = localStorage.getItem('bun_fight_nickname') || '';
+        let lastProcessedHistoryLength = 0; 
+        let wasInGame = false; 
+        let pendingJoinName = null;
+
+        const emojiMap = { 
+            'BUN': '🥯 BUN', 
+            'TORTILLA': '🫓 TORTILLA', 
+            'CROISSANT': '🥐 CROISSANT' 
+        };
+
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        window.addEventListener('click', () => {
+            getAudioContext();
+        }, { once: true });
+
+        function playTicTocSound() {
+            const ctx = getAudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(800, ctx.currentTime); 
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.08);
+        }
+
+        function playLockInSound() {
+            const ctx = getAudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(440, ctx.currentTime); 
+            osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); 
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.2);
+        }
+
+        function playVictoryMelody() {
+            const ctx = getAudioContext();
+            const now = ctx.currentTime;
+            const notes = [523.25, 659.25, 783.99, 1046.50];
+            
+            notes.forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now + (i * 0.15));
+                gain.gain.setValueAtTime(0.25, now + (i * 0.15));
+                gain.gain.exponentialRampToValueAtTime(0.001, now + (i * 0.15) + 0.35);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + (i * 0.15));
+                osc.stop(now + (i * 0.15) + 0.35);
+            });
+        }
+
+        function triggerVictoryReward(isMatchEnd, roundNum, winnerName) {
+            playVictoryMelody();
+            
+            if (navigator.vibrate) {
+                navigator.vibrate([100, 50, 100, 50, 200]);
+            }
+
+            const modal = document.getElementById('reward-modal');
+            const title = document.getElementById('reward-title');
+            const desc = document.getElementById('reward-desc');
+            const bonus = document.getElementById('reward-bonus');
+            const icon = document.getElementById('reward-icon');
+
+            if (isMatchEnd) {
+                icon.innerText = "👑🏆";
+                title.innerText = "CHAMPION CROWNED!";
+                desc.innerText = `Incredible victory, ${winnerName}! You claimed ultimate supremacy in the arena!`;
+                bonus.innerText = `+150 ESP & Streak Bonus`;
+            } else {
+                icon.innerText = "✨";
+                title.innerText = `Round ${roundNum} Won!`;
+                desc.innerText = "Fantastic prediction! You outsmarted your opponent's choice.";
+                bonus.innerText = `+50 ESP`;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeRewardModal() {
+            document.getElementById('reward-modal').classList.add('hidden');
+        }
+
+        let ticTocInterval = null;
+
+        function startTicToc() {
+            stopTicToc();
+            ticTocInterval = setInterval(() => {
+                playTicTocSound();
+            }, 1000);
+        }
+
+        function stopTicToc() {
+            if (ticTocInterval) {
+                clearInterval(ticTocInterval);
+                ticTocInterval = null;
+            }
+        }
+
+        function switchView(view) {
+            if (view === 'player') {
+                document.getElementById('view-player').classList.remove('hidden');
+                document.getElementById('view-host').classList.add('hidden');
+                document.getElementById('btn-player-view').className = 'bg-amber-700 px-3 py-1 rounded text-sm font-semibold';
+                document.getElementById('btn-host-view').className = 'bg-amber-800 px-3 py-1 rounded text-sm font-semibold opacity-75';
+            } else {
+                document.getElementById('view-player').classList.add('hidden');
+                document.getElementById('view-host').classList.remove('hidden');
+                document.getElementById('btn-host-view').className = 'bg-amber-700 px-3 py-1 rounded text-sm font-semibold';
+                document.getElementById('btn-player-view').className = 'bg-amber-800 px-3 py-1 rounded text-sm font-semibold opacity-75';
+            }
+        }
+
+        function initHostCheck() {
+            if (window.location.pathname === '/host') {
+                document.getElementById('screen-join').classList.add('hidden');
+                document.getElementById('screen-dashboard').classList.remove('hidden');
+                switchView('host');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', initHostCheck);
+
+        function showJoinError(message) {
+            const errEl = document.getElementById('join-error');
+            errEl.innerText = message;
+            errEl.classList.remove('hidden');
+        }
+
+        function clearJoinError() {
+            const errEl = document.getElementById('join-error');
+            errEl.classList.add('hidden');
+            errEl.innerText = '';
+        }
+
+        function joinGame(e) {
+            if (e) e.preventDefault();
+            clearJoinError();
+            const inputVal = document.getElementById('nickname').value.trim();
+            const attemptedName = inputVal || myName;
+            if (!attemptedName) return;
+
+            // Don't commit to myName/localStorage until the server confirms the join
+            pendingJoinName = attemptedName;
+            socket.emit('join_game', { name: attemptedName });
+        }
+
+        function confirmJoin(name) {
+            myName = name;
+            pendingJoinName = null;
+            wasInGame = true;
+            localStorage.setItem('bun_fight_nickname', myName);
+            document.getElementById('display-my-name').innerText = `👤 ${myName}`;
+            document.getElementById('screen-join').classList.add('hidden');
+            document.getElementById('screen-dashboard').classList.remove('hidden');
+        }
+
+        function makeChoice(choice) {
+            stopTicToc();
+            playLockInSound();
+            
+            socket.emit('make_choice', { choice: choice });
+            document.getElementById('choice-status-badge').className = 'bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold';
+            document.getElementById('choice-status-badge').innerText = `Choice Locked: ${choice}! 🎯`;
+            
+            const btns = document.querySelectorAll('.choice-btn');
+            btns.forEach(b => b.classList.add('opacity-50', 'pointer-events-none'));
+        }
+
+        function resetPlayerButtons() {
+            const btns = document.querySelectorAll('.choice-btn');
+            btns.forEach(b => {
+                b.classList.remove('opacity-50', 'pointer-events-none', 'ring-4', 'ring-amber-500');
+            });
+            const badge = document.getElementById('choice-status-badge');
+            if (badge) {
+                badge.className = 'bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm';
+                badge.innerText = 'Make your move!';
+            }
+        }
+
+        function resetGame() {
+            if (confirm("Are you sure you want to reset the game state?")) {
+                socket.emit('reset_game');
+            }
+        }
+
+        socket.on('connect', () => {
+            currentSid = socket.id;
+            if (wasInGame && myName) {
+                pendingJoinName = myName;
+                socket.emit('join_game', { name: myName });
+            }
+        });
+
+        socket.on('join_error', (data) => {
+            pendingJoinName = null;
+            showJoinError((data && data.message) || 'Could not join. Try a different nickname.');
+        });
+
+        socket.on('state_update', (state) => {
+            const isHostRoute = window.location.pathname === '/host';
+
+            // A pending join succeeds once our name shows up anywhere in server state.
+            if (pendingJoinName) {
+                const nameIsLive =
+                    (state.champion && state.champion.name === pendingJoinName) ||
+                    state.queue.some(q => q.name === pendingJoinName) ||
+                    (state.match && (state.match.challenger_name === pendingJoinName || state.match.champ_name === pendingJoinName));
+                if (nameIsLive) {
+                    confirmJoin(pendingJoinName);
+                }
+            }
+
+            if (state.game_mode === "WAITING" && !state.champion && state.queue.length === 0 && !isHostRoute) {
+                document.getElementById('screen-dashboard').classList.add('hidden');
+                document.getElementById('screen-join').classList.remove('hidden');
+            }
+
+            if (state.champion) {
+                document.getElementById('host-champ-name').innerText = state.champion.name;
+                document.getElementById('host-champ-streak').innerText = `🔥 ${state.champion.streak}`;
+            } else {
+                document.getElementById('host-champ-name').innerText = 'No Champion Yet';
+                document.getElementById('host-champ-streak').innerText = '🔥 0';
+            }
+
+            const queueList = document.getElementById('queue-list');
+            const queueCount = document.getElementById('queue-count');
+            queueCount.innerText = `${state.queue.length} waiting`;
+            if (state.queue.length === 0) {
+                queueList.innerHTML = `<li class="text-slate-400 text-sm text-center py-2">Queue is empty</li>`;
+            } else {
+                queueList.innerHTML = state.queue.map((q, idx) => `
+                    <li class="bg-amber-50 px-3 py-2 rounded-lg text-sm font-semibold flex justify-between items-center border border-amber-100">
+                        <span>#${idx + 1} ${q.name}</span>
+                        ${q.name === myName ? '<span class="text-xs bg-amber-500 text-white px-2 py-0.5 rounded">You</span>' : ''}
+                    </li>
+                `).join('');
+            }
+
+            const lbList = document.getElementById('leaderboard-list');
+            if (state.leaderboard.length === 0) {
+                lbList.innerHTML = `<li class="text-slate-400 text-sm text-center py-2">No psychic energy detected</li>`;
+            } else {
+                lbList.innerHTML = state.leaderboard.map((p, idx) => `
+                    <li class="flex justify-between items-center text-sm py-1.5 border-b border-slate-100 last:border-0">
+                        <span class="font-semibold text-slate-700">${idx === 0 ? '👑 ' : ''}${idx + 1}. ${p.name}</span>
+                        <div class="text-right">
+                            <span class="font-bold text-indigo-600">${p.esp_rating} ESP</span>
+                        </div>
+                    </li>
+                `).join('');
+            }
+
+            const hostInactive = document.getElementById('host-match-inactive');
+            const hostActive = document.getElementById('host-match-active');
+            const battleControls = document.getElementById('battle-controls');
+            const playerStatusTitle = document.getElementById('player-status-title');
+            const playerStatusDesc = document.getElementById('player-status-desc');
+            const startMatchContainer = document.getElementById('start-match-container');
+
+            const me = state.leaderboard.find(p => p.name === myName);
+            if (me) {
+                document.getElementById('my-streak').innerText = me.streak;
+                document.getElementById('my-esp').innerText = me.esp_rating;
+            }
+
+            if (state.game_mode === "WAITING") {
+                stopTicToc();
+                hostInactive.classList.remove('hidden');
+                hostActive.classList.add('hidden');
+                battleControls.classList.add('hidden');
+                lastProcessedHistoryLength = 0;
+                
+                const qIdx = state.queue.findIndex(q => q.name === myName);
+                const isChamp = state.champion && state.champion.name === myName;
+
+                if (state.champion && state.queue.length > 0) {
+                    startMatchContainer.classList.remove('hidden');
+                } else {
+                    startMatchContainer.classList.add('hidden');
+                }
+
+                if (isChamp) {
+                    playerStatusTitle.innerText = "👑 You are the Champion!";
+                    playerStatusDesc.innerText = "Wait for the next challenger to enter the arena.";
+                } else if (qIdx !== -1) {
+                    playerStatusTitle.innerText = `⏳ Position #${qIdx + 1} in Queue`;
+                    playerStatusDesc.innerText = "Get ready! Stretch your psychic powers.";
+                } else {
+                    playerStatusTitle.innerText = "Ready to Fight!";
+                    playerStatusDesc.innerText = "You are queued up.";
+                }
+            } else {
+                startMatchContainer.classList.add('hidden');
+
+                if (state.game_mode === "MATCH_IN_PROGRESS" && state.match) {
+                    hostInactive.classList.add('hidden');
+                    hostActive.classList.remove('hidden');
+
+                    document.getElementById('hm-challenger-name').innerText = state.match.challenger_name;
+                    document.getElementById('hm-champ-name').innerText = state.match.champ_name;
+                    document.getElementById('hm-p1-wins').innerText = state.match.p1_wins;
+                    document.getElementById('hm-p2-wins').innerText = state.match.p2_wins;
+
+                    document.getElementById('hm-p1-status').innerText = state.match.p1_choice_made ? "🔒 Locked In" : "🤔 Choosing...";
+                    document.getElementById('hm-p1-status').className = `mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold ${state.match.p1_choice_made ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700 animate-pulse'}`;
+                    
+                    document.getElementById('hm-p2-status').innerText = state.match.p2_choice_made ? "🔒 Locked In" : "🤔 Choosing...";
+                    document.getElementById('hm-p2-status').className = `mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold ${state.match.p2_choice_made ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700 animate-pulse'}`;
+
+                    const history = state.match.history;
+                    let p1PatternMsg = "";
+                    let p2PatternMsg = "";
+                    if (history && history.length >= 2) {
+                        const allP1 = history.every(h => h.p1_choice === history[0].p1_choice);
+                        const allP2 = history.every(h => h.p2_choice === history[0].p2_choice);
+                        if (allP1) p1PatternMsg = `⚠️ Always plays ${history[0].p1_choice}!`;
+                        if (allP2) p2PatternMsg = `⚠️ Always plays ${history[0].p2_choice}!`;
+                    }
+                    document.getElementById('hm-p1-pattern').innerText = p1PatternMsg;
+                    document.getElementById('hm-p2-pattern').innerText = p2PatternMsg;
+
+                    const historyList = document.getElementById('host-history-list');
+                    if (!history || history.length === 0) {
+                        historyList.innerHTML = `<span class="text-slate-400 italic">No challenges played yet in this match.</span>`;
+                    } else {
+                        historyList.innerHTML = history.map(h => `
+                            <div class="flex justify-between items-center bg-white px-3 py-1.5 rounded border border-slate-200">
+                                <span class="font-bold text-slate-700">Round ${h.round_num}</span>
+                                <span class="text-slate-600">${state.match.challenger_name} (${emojiMap[h.p1_choice] || h.p1_choice}) vs ${state.match.champ_name} (${emojiMap[h.p2_choice] || h.p2_choice})</span>
+                                <span class="font-extrabold text-amber-700">Winner: ${h.winner}</span>
+                            </div>
+                        `).join('');
+                    }
+
+                    document.getElementById('match-result-banner').classList.add('hidden');
+
+                    const isChallenger = state.match.challenger_name === myName;
+                    const isChamp = state.match.champ_name === myName;
+
+                    if (isChallenger || isChamp) {
+                        battleControls.classList.remove('hidden');
+                        document.getElementById('match-score-display').innerText = `Round ${state.match.round_num} | Best of 3`;
+                        
+                        const myChoiceMade = isChallenger ? state.match.p1_choice_made : state.match.p2_choice_made;
+                        if (!myChoiceMade) {
+                            resetPlayerButtons();
+                            startTicToc();
+                        } else {
+                            stopTicToc();
+                        }
+
+                        playerStatusTitle.innerText = "⚔️ BATTLE IN PROGRESS!";
+                        playerStatusDesc.innerText = `Fighting against ${isChallenger ? state.match.champ_name : state.match.challenger_name}!`;
+                    } else {
+                        stopTicToc();
+                        battleControls.classList.add('hidden');
+                        playerStatusTitle.innerText = "👀 Spectating Active Match";
+                        playerStatusDesc.innerText = `${state.match.challenger_name} vs ${state.match.champ_name} is underway!`;
+                    }
+                } else if (state.game_mode === "ROUND_OVER" && state.match) {
+                    stopTicToc();
+                    hostInactive.classList.add('hidden');
+                    hostActive.classList.remove('hidden');
+                    battleControls.classList.add('hidden');
+
+                    document.getElementById('hm-p1-status').innerText = "🔒 Locked In";
+                    document.getElementById('hm-p1-status').className = "mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold bg-green-100 text-green-700";
+                    
+                    document.getElementById('hm-p2-status').innerText = "🔒 Locked In";
+                    document.getElementById('hm-p2-status').className = "mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold bg-green-100 text-green-700";
+
+                    const p1ChoiceStr = emojiMap[state.match.p1_choice] || state.match.p1_choice;
+                    const p2ChoiceStr = emojiMap[state.match.p2_choice] || state.match.p2_choice;
+
+                    const history = state.match.history || [];
+                    const historyList = document.getElementById('host-history-list');
+                    if (history.length > 0) {
+                        historyList.innerHTML = history.map(h => `
+                            <div class="flex justify-between items-center bg-white px-3 py-1.5 rounded border border-slate-200">
+                                <span class="font-bold text-slate-700">Round ${h.round_num}</span>
+                                <span class="text-slate-600">${state.match.challenger_name} (${emojiMap[h.p1_choice] || h.p1_choice}) vs ${state.match.champ_name} (${emojiMap[h.p2_choice] || h.p2_choice})</span>
+                                <span class="font-extrabold text-amber-700">Winner: ${h.winner}</span>
+                            </div>
+                        `).join('');
+                    }
+
+                    const resultBanner = document.getElementById('match-result-banner');
+                    resultBanner.classList.remove('hidden');
+                    document.getElementById('result-choices-display').innerText = `${state.match.challenger_name} (${p1ChoiceStr}) vs ${state.match.champ_name} (${p2ChoiceStr})`;
+
+                    const roundWinner = state.match.match_winner;
+                    if (roundWinner && roundWinner.includes("Tie")) {
+                        document.getElementById('result-winner-text').innerText = "IT'S A TIE!";
+                    } else {
+                        document.getElementById('result-winner-text').innerText = `${roundWinner} Wins Round!`;
+                    }
+
+                    if (history.length > lastProcessedHistoryLength) {
+                        lastProcessedHistoryLength = history.length;
+                        const lastRound = history[history.length - 1];
+                        
+                        if (lastRound.winner === myName) {
+                            const isMatchEnd = state.match.p1_wins >= 2 || state.match.p2_wins >= 2;
+                            triggerVictoryReward(isMatchEnd, lastRound.round_num, myName);
+                        }
+                    }
+
+                    playerStatusTitle.innerText = "💥 ROUND COMPLETE!";
+                    playerStatusDesc.innerText = "Preparing for the next round...";
+                }
+            }
+        });
+    </script>
+</body>
+</html>
