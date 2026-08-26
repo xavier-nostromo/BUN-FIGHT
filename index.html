@@ -214,7 +214,8 @@
         });
 
         const socket = io({
-            transports: ['websocket', 'polling'] // Force lower latency socket transport connection
+            transports: ['websocket'], // Force pure WebSocket transport to completely bypass polling delays
+            upgrade: false
         });
         
         let currentSid = null;
