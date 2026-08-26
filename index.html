@@ -462,146 +462,149 @@
         });
 
         socket.on('state_update', (state) => {
-            if (pendingJoinName) {
-                const nameIsLive =
-                    (state.champion && state.champion.name === pendingJoinName) ||
-                    state.queue.some(q => q.name === pendingJoinName) ||
-                    (state.match && (state.match.challenger_name === pendingJoinName || state.match.champ_name === pendingJoinName));
-                if (nameIsLive) {
-                    confirmJoin(pendingJoinName);
-                }
-            }
+    if (pendingJoinName) {
+        const nameIsLive =
+            (state.champion && state.champion.name === pendingJoinName) ||
+            state.queue.some(q => q.name === pendingJoinName) ||
+            (state.match && (state.match.challenger_name === pendingJoinName || state.match.champ_name === pendingJoinName));
+        if (nameIsLive) {
+            confirmJoin(pendingJoinName);
+        }
+    }
 
-            if (state.champion) {
-                document.getElementById('host-champ-name').innerText = state.champion.name;
-                document.getElementById('host-champ-streak').innerText = `🔥 ${state.champion.streak}`;
-            } else {
-                document.getElementById('host-champ-name').innerText = 'No Champion Yet';
-                document.getElementById('host-champ-streak').innerText = '🔥 0';
-            }
+    if (state.champion) {
+        document.getElementById('host-champ-name').innerText = state.champion.name;
+        document.getElementById('host-champ-streak').innerText = `🔥 ${state.champion.streak}`;
+    } else {
+        document.getElementById('host-champ-name').innerText = 'No Champion Yet';
+        document.getElementById('host-champ-streak').innerText = '🔥 0';
+    }
 
-            const queueList = document.getElementById('queue-list');
-            document.getElementById('queue-count').innerText = `${state.queue.length} waiting`;
-            if (state.queue.length === 0) {
-                queueList.innerHTML = `<li class="text-slate-400 text-sm text-center py-2">Queue is empty</li>`;
-            } else {
-                queueList.innerHTML = state.queue.map((q, idx) => `
-                    <li class="bg-amber-50 px-3 py-2 rounded-lg text-sm font-semibold flex justify-between items-center border border-amber-100">
-                        <span>#${idx + 1} ${escapeHtml(q.name)}</span>
-                        ${q.name === myName ? '<span class="text-xs bg-amber-500 text-white px-2 py-0.5 rounded">You</span>' : ''}
-                    </li>
-                `).join('');
-            }
+    const queueList = document.getElementById('queue-list');
+    document.getElementById('queue-count').innerText = `${state.queue.length} waiting`;
+    if (state.queue.length === 0) {
+        queueList.innerHTML = `<li class="text-slate-400 text-sm text-center py-2">Queue is empty</li>`;
+    } else {
+        queueList.innerHTML = state.queue.map((q, idx) => `
+            <li class="bg-amber-50 px-3 py-2 rounded-lg text-sm font-semibold flex justify-between items-center border border-amber-100">
+                <span>#${idx + 1} ${escapeHtml(q.name)}</span>
+                ${q.name === myName ? '<span class="text-xs bg-amber-500 text-white px-2 py-0.5 rounded">You</span>' : ''}
+            </li>
+        `).join('');
+    }
 
-            const lbList = document.getElementById('leaderboard-list');
-            if (state.leaderboard.length === 0) {
-                lbList.innerHTML = `<li class="text-slate-400 text-sm text-center py-2">No psychic energy detected</li>`;
-            } else {
-                lbList.innerHTML = state.leaderboard.map((p, idx) => `
-                    <li class="flex justify-between items-center text-sm py-1.5 border-b border-slate-100 last:border-0">
-                        <span class="font-semibold text-slate-700">${idx === 0 ? '👑 ' : ''}${idx + 1}. ${escapeHtml(p.name)}</span>
-                        <div class="text-right"><span class="font-bold text-indigo-600">${p.esp_rating} ESP</span></div>
-                    </li>
-                `).join('');
-            }
+    const lbList = document.getElementById('leaderboard-list');
+    if (state.leaderboard.length === 0) {
+        lbList.innerHTML = `<li class="text-slate-400 text-sm text-center py-2">No psychic energy detected</li>`;
+    } else {
+        lbList.innerHTML = state.leaderboard.map((p, idx) => `
+            <li class="flex justify-between items-center text-sm py-1.5 border-b border-slate-100 last:border-0">
+                <span class="font-semibold text-slate-700">${idx === 0 ? '👑 ' : ''}${idx + 1}. ${escapeHtml(p.name)}</span>
+                <div class="text-right"><span class="font-bold text-indigo-600">${p.esp_rating} ESP</span></div>
+            </li>
+        `).join('');
+    }
 
-            const hostInactive = document.getElementById('host-match-inactive');
-            const hostActive = document.getElementById('host-match-active');
-            const battleControls = document.getElementById('battle-controls');
-            const playerStatusTitle = document.getElementById('player-status-title');
-            const playerStatusDesc = document.getElementById('player-status-desc');
-            const startMatchContainer = document.getElementById('start-match-container');
+    const hostInactive = document.getElementById('host-match-inactive');
+    const hostActive = document.getElementById('host-match-active');
+    const battleControls = document.getElementById('battle-controls');
+    const playerStatusTitle = document.getElementById('player-status-title');
+    const playerStatusDesc = document.getElementById('player-status-desc');
+    const startMatchContainer = document.getElementById('start-match-container');
 
-            const me = state.leaderboard.find(p => p.name === myName);
-            if (me) {
-                document.getElementById('my-streak').innerText = me.streak;
-                document.getElementById('my-esp').innerText = me.esp_rating;
-            }
+    const me = state.leaderboard.find(p => p.name === myName);
+    if (me) {
+        document.getElementById('my-streak').innerText = me.streak;
+        document.getElementById('my-esp').innerText = me.esp_rating;
+    }
 
-            if (state.game_mode === "WAITING") {
-                stopTicToc();
-                hostInactive.classList.remove('hidden');
-                hostActive.classList.add('hidden');
-                battleControls.classList.add('hidden');
-                lastProcessedHistoryLength = 0;
-                lastKnownRoundNum = 0;
+    if (state.game_mode === "WAITING") {
+        stopTicToc();
+        hostInactive.classList.remove('hidden');
+        hostActive.classList.add('hidden');
+        battleControls.classList.add('hidden');
+        
+        // RESET TRACKERS HERE so matches 5, 6, and beyond don't get locked out
+        lastProcessedHistoryLength = 0;
+        lastKnownRoundNum = 0;
+        
+        const qIdx = state.queue.findIndex(q => q.name === myName);
+        const isChamp = state.champion && state.champion.name === myName;
+
+        if (state.champion && state.queue.length > 0) {
+            startMatchContainer.classList.remove('hidden');
+        } else {
+            startMatchContainer.classList.add('hidden');
+        }
+
+        if (isChamp) {
+            playerStatusTitle.innerText = "👑 You are the Champion!";
+            playerStatusDesc.innerText = "Wait for the next challenger to enter the arena.";
+        } else if (qIdx !== -1) {
+            playerStatusTitle.innerText = `⏳ Position #${qIdx + 1} in Queue`;
+            playerStatusDesc.innerText = "Get ready! Stretch your psychic powers.";
+        } else {
+            playerStatusTitle.innerText = "Ready to Fight!";
+            playerStatusDesc.innerText = "Join the queue above to start battling.";
+        }
+    } else {
+        startMatchContainer.classList.add('hidden');
+
+        if (state.game_mode === "MATCH_IN_PROGRESS" || state.game_mode === "ROUND_OVER") {
+            hostInactive.classList.add('hidden');
+            hostActive.classList.remove('hidden');
+
+            const isMatchPlayer = state.match && (namesMatch(state.match.challenger_name, myName) || namesMatch(state.match.champ_name, myName));
+            if (isMatchPlayer && state.game_mode === "MATCH_IN_PROGRESS") {
+                battleControls.classList.remove('hidden');
                 
-                const qIdx = state.queue.findIndex(q => q.name === myName);
-                const isChamp = state.champion && state.champion.name === myName;
-
-                if (state.champion && state.queue.length > 0) {
-                    startMatchContainer.classList.remove('hidden');
-                } else {
-                    startMatchContainer.classList.add('hidden');
-                }
-
-                if (isChamp) {
-                    playerStatusTitle.innerText = "👑 You are the Champion!";
-                    playerStatusDesc.innerText = "Wait for the next challenger to enter the arena.";
-                } else if (qIdx !== -1) {
-                    playerStatusTitle.innerText = `⏳ Position #${qIdx + 1} in Queue`;
-                    playerStatusDesc.innerText = "Get ready! Stretch your psychic powers.";
-                } else {
-                    playerStatusTitle.innerText = "Ready to Fight!";
-                    playerStatusDesc.innerText = "Join the queue above to start battling.";
+                if (state.match.round_num !== lastKnownRoundNum) {
+                    resetPlayerButtons();
+                    lastKnownRoundNum = state.match.round_num;
                 }
             } else {
-                startMatchContainer.classList.add('hidden');
+                battleControls.classList.add('hidden');
+            }
 
-                if (state.game_mode === "MATCH_IN_PROGRESS" || state.game_mode === "ROUND_OVER") {
-                    hostInactive.classList.add('hidden');
-                    hostActive.classList.remove('hidden');
+            document.getElementById('hm-challenger-name').innerText = state.match.challenger_name;
+            document.getElementById('hm-champ-name').innerText = state.match.champ_name;
+            document.getElementById('hm-p1-wins').innerText = state.match.p1_wins;
+            document.getElementById('hm-p2-wins').innerText = state.match.p2_wins;
 
-                    const isMatchPlayer = state.match && (namesMatch(state.match.challenger_name, myName) || namesMatch(state.match.champ_name, myName));
-                    if (isMatchPlayer && state.game_mode === "MATCH_IN_PROGRESS") {
-                        battleControls.classList.remove('hidden');
-                        
-                        if (state.match.round_num !== lastKnownRoundNum) {
-                            resetPlayerButtons();
-                            lastKnownRoundNum = state.match.round_num;
-                        }
-                    } else {
-                        battleControls.classList.add('hidden');
-                    }
+            const p1Locked = state.match.p1_choice_made;
+            const p2Locked = state.match.p2_choice_made;
 
-                    document.getElementById('hm-challenger-name').innerText = state.match.challenger_name;
-                    document.getElementById('hm-champ-name').innerText = state.match.champ_name;
-                    document.getElementById('hm-p1-wins').innerText = state.match.p1_wins;
-                    document.getElementById('hm-p2-wins').innerText = state.match.p2_wins;
+            document.getElementById('hm-p1-status').innerText = p1Locked ? "⚡ Choice Logged" : "🤔 Choosing...";
+            document.getElementById('hm-p2-status').innerText = p2Locked ? "⚡ Choice Logged" : "🤔 Choosing...";
 
-                    const p1Locked = state.match.p1_choice_made;
-                    const p2Locked = state.match.p2_choice_made;
+            const history = state.match.history || [];
+            let historyList = document.getElementById('host-history-list');
+            if (history.length === 0) {
+                historyList.innerHTML = `<span class="text-slate-400 italic">No matches played yet in this round series.</span>`;
+                lastProcessedHistoryLength = 0; // Safe reset if history clears out
+            } else {
+                historyList.innerHTML = history.map(h => `
+                    <div class="flex justify-between items-center bg-white px-3 py-1.5 rounded border border-slate-200">
+                        <span class="font-bold text-slate-700">Round ${h.round_num}</span>
+                        <span class="text-slate-600">${escapeHtml(h.winner)} won (${escapeHtml(h.p1_choice)} vs ${escapeHtml(h.p2_choice)})</span>
+                    </div>
+                `).join('');
+            }
 
-                    document.getElementById('hm-p1-status').innerText = p1Locked ? "⚡ Choice Logged" : "🤔 Choosing...";
-                    document.getElementById('hm-p2-status').innerText = p2Locked ? "⚡ Choice Logged" : "🤔 Choosing...";
-
-                    const history = state.match.history;
-                    let historyList = document.getElementById('host-history-list');
-                    if (!history || history.length === 0) {
-                        historyList.innerHTML = `<span class="text-slate-400 italic">No matches played yet in this round series.</span>`;
-                    } else {
-                        historyList.innerHTML = history.map(h => `
-                            <div class="flex justify-between items-center bg-white px-3 py-1.5 rounded border border-slate-200">
-                                <span class="font-bold text-slate-700">Round ${h.round_num}</span>
-                                <span class="text-slate-600">${escapeHtml(h.winner)} won (${escapeHtml(h.p1_choice)} vs ${escapeHtml(h.p2_choice)})</span>
-                            </div>
-                        `).join('');
-                    }
-
-                    if (state.game_mode === "ROUND_OVER" && history.length > lastProcessedHistoryLength) {
-                        lastProcessedHistoryLength = history.length;
-                        const latestRound = history[history.length - 1];
-                        const isMatchEnd = state.match.p1_wins >= 2 || state.match.p2_wins >= 2;
-                        
-                        if (latestRound.winner === myName) {
-                            triggerVictoryReward(isMatchEnd, latestRound.round_num, latestRound.winner);
-                        } else if (latestRound.winner && latestRound.winner !== "Tie") {
-                            triggerDefeatReward(isMatchEnd, latestRound.round_num, latestRound.winner);
-                        }
-                    }
+            if (state.game_mode === "ROUND_OVER" && history.length > lastProcessedHistoryLength) {
+                lastProcessedHistoryLength = history.length;
+                const latestRound = history[history.length - 1];
+                const isMatchEnd = state.match.p1_wins >= 2 || state.match.p2_wins >= 2;
+                
+                if (latestRound.winner === myName) {
+                    triggerVictoryReward(isMatchEnd, latestRound.round_num, latestRound.winner);
+                } else if (latestRound.winner && latestRound.winner !== "Tie") {
+                    triggerDefeatReward(isMatchEnd, latestRound.round_num, latestRound.winner);
                 }
             }
-        });
+        }
+    }
+});
     </script>
 </body>
 </html>
