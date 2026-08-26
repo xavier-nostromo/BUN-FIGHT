@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bun Fight Arena - Match vs Game Win Mod</title>
+    <title>Bun Fight Arena - Match vs Game Mod</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -43,18 +43,18 @@
     <!-- Main Arena View -->
     <main class="w-full max-w-4xl flex flex-col items-center justify-center my-auto py-8">
         <div id="arena-card" class="bg-slate-800/80 border border-slate-700 rounded-3xl p-8 shadow-2xl text-center w-full max-w-lg">
-            <h2 id="announcement" class="text-2xl font-bold mb-6 text-indigo-300">Choose Your Bun Attack!</h2>
+            <h2 id="announcement" class="text-2xl font-bold mb-6 text-indigo-300">Choose Your Carb Weapon!</h2>
             
-            <!-- Choice Buttons -->
+            <!-- Choice Buttons (Bun, Croissant, Tortilla Scheme) -->
             <div id="action-buttons" class="grid grid-cols-3 gap-4 mb-8">
-                <button onclick="makeChoice('cinnamon')" class="bg-amber-700 hover:bg-amber-600 p-6 rounded-2xl font-bold text-lg transition transform hover:-translate-y-1 shadow-lg flex flex-col items-center gap-2">
-                    🥐 <span>Cinnamon</span>
+                <button onclick="makeChoice('bun')" class="bg-amber-700 hover:bg-amber-600 p-6 rounded-2xl font-bold text-lg transition transform hover:-translate-y-1 shadow-lg flex flex-col items-center gap-2">
+                    🍞 <span>Bun</span>
                 </button>
-                <button onclick="makeChoice('glazed')" class="bg-amber-500 hover:bg-amber-400 text-slate-900 p-6 rounded-2xl font-bold text-lg transition transform hover:-translate-y-1 shadow-lg flex flex-col items-center gap-2">
-                    🍩 <span>Glazed</span>
+                <button onclick="makeChoice('croissant')" class="bg-amber-500 hover:bg-amber-400 text-slate-900 p-6 rounded-2xl font-bold text-lg transition transform hover:-translate-y-1 shadow-lg flex flex-col items-center gap-2">
+                    🥐 <span>Croissant</span>
                 </button>
-                <button onclick="makeChoice('toasted')" class="bg-orange-800 hover:bg-orange-700 p-6 rounded-2xl font-bold text-lg transition transform hover:-translate-y-1 shadow-lg flex flex-col items-center gap-2">
-                    🍞 <span>Toasted</span>
+                <button onclick="makeChoice('tortilla')" class="bg-yellow-700 hover:bg-yellow-600 p-6 rounded-2xl font-bold text-lg transition transform hover:-translate-y-1 shadow-lg flex flex-col items-center gap-2">
+                    🫓 <span>Tortilla</span>
                 </button>
             </div>
 
@@ -65,12 +65,24 @@
         </div>
     </main>
 
+    <!-- Match/Game Win Modal Component -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl transform transition-all">
+            <div id="modal-icon" class="text-5xl mb-4">🏆</div>
+            <h3 id="modal-title" class="text-2xl font-bold text-amber-400 mb-2">Game Win!</h3>
+            <p id="modal-desc" class="text-slate-300 mb-6">Player 1 has secured this individual game round.</p>
+            <button onclick="closeModal()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition shadow-lg">
+                Continue
+            </button>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="text-xs text-slate-500">
-        Bun Fight Arena &bull; Match vs Game Mod Architecture
+        Bun Fight Arena &bull; Carb Mod Architecture
     </footer>
 
-    <!-- Script Logic for Match vs Game Differentiation -->
+    <!-- Script Logic for Bun-Croissant-Tortilla & Match/Game Modals -->
     <script>
         // Match State Management
         const matchState = {
@@ -82,7 +94,8 @@
             }
         };
 
-        const choices = ['cinnamon', 'glazed', 'toasted'];
+        const choices = ['bun', 'croissant', 'tortilla'];
+        let pendingNextAction = null;
 
         function makeChoice(p1Choice) {
             // Simulate opponent choice for demonstration
@@ -97,11 +110,14 @@
                 return;
             }
 
-            // Simple win matrix logic
+            // Bun-Croissant-Tortilla Win Matrix Rule Set:
+            // Bun beats Tortilla (crushes)
+            // Tortilla beats Croissant (wraps)
+            // Croissant beats Bun (flakes)
             if (
-                (p1Choice === 'cinnamon' && p2Choice === 'toasted') ||
-                (p1Choice === 'glazed' && p2Choice === 'cinnamon') ||
-                (p1Choice === 'toasted' && p2Choice === 'glazed')
+                (p1Choice === 'bun' && p2Choice === 'tortilla') ||
+                (p1Choice === 'tortilla' && p2Choice === 'croissant') ||
+                (p1Choice === 'croissant' && p2Choice === 'bun')
             ) {
                 roundWinner = 'player1';
                 logMessage += "<strong>You won this Game round! 🎉</strong>";
@@ -119,32 +135,55 @@
             matchState.players[winnerKey].gameWins += 1;
             updateScoreboard();
 
+            const winnerName = matchState.players[winnerKey].name;
+
             // 2. Check if player has hit the target to win the overall Match (Set)
             if (matchState.players[winnerKey].gameWins >= matchState.targetGameWins) {
-                handleMatchWin(winnerKey);
+                matchState.players[winnerKey].matchWins += 1;
+                
+                showModal(
+                    "🏆 Match Victory!", 
+                    `${winnerName} won the entire Match Set (2 Game Wins)!`, 
+                    "👑", 
+                    () => resetEntireMatch()
+                );
             } else {
-                // Advance to the next game in the series
                 matchState.currentGame += 1;
                 document.getElementById('round-status').innerText = `Game ${matchState.currentGame} in Progress`;
+                
+                showModal(
+                    "🎯 Game Round Won!", 
+                    `${winnerName} takes Game ${matchState.currentGame - 1}.`, 
+                    "🍞", 
+                    () => {}
+                );
             }
         }
 
-        function handleMatchWin(winnerKey) {
-            const winnerName = matchState.players[winnerKey].name;
-            
-            // 1. Increment overall Match Win
-            matchState.players[winnerKey].matchWins += 1;
-            
-            // 2. Announce Match Victory and reset game blocks for the next series
-            alert(`🏆 ${winnerName} has won the entire Match Set! Series resetting.`);
-            
-            // Reset game-level tallies for a fresh series, keeping match wins intact
+        function resetEntireMatch() {
             matchState.players.player1.gameWins = 0;
             matchState.players.player2.gameWins = 0;
             matchState.currentGame = 1;
-            
             document.getElementById('round-status').innerText = `New Series Started (Game 1)`;
             updateScoreboard();
+        }
+
+        function showModal(title, description, icon, callback) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-desc').innerText = description;
+            document.getElementById('modal-icon').innerText = icon;
+            document.getElementById('modal-overlay').classList.remove('hidden');
+            document.getElementById('modal-overlay').classList.add('flex');
+            pendingNextAction = callback;
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.remove('flex');
+            document.getElementById('modal-overlay').classList.add('hidden');
+            if (pendingNextAction) {
+                pendingNextAction();
+                pendingNextAction = null;
+            }
         }
 
         function updateScoreboard() {
