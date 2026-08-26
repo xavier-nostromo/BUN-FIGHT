@@ -299,69 +299,71 @@ io.on('connection', (socket) => {
             return; // Spectator attempted to play
         }
 
-        if (match.p1_choice_made && match.p2_choice_made) {
-            let roundWinnerName = null;
-
-            if (match.p1_choice === match.p2_choice) {
-                match.match_winner = "Tie (Re-throw!)";
-                match.history.push({
-                    round_num: match.round_num,
-                    p1_choice: match.p1_choice,
-                    p2_choice: match.p2_choice,
-                    winner: "Tie"
-                });
-                gameState.game_mode = "ROUND_OVER";
-            } else if (
-                (match.p1_choice === 'BUN' && match.p2_choice === 'CROISSANT') ||
-                (match.p1_choice === 'TORTILLA' && match.p2_choice === 'BUN') ||
-                (match.p1_choice === 'CROISSANT' && match.p2_choice === 'TORTILLA')
-            ) {
-                match.p1_wins++;
-                roundWinnerName = match.challenger_name;
-            } else {
-                match.p2_wins++;
-                roundWinnerName = match.champ_name;
-            }
-
-            if (roundWinnerName) {
-                match.history.push({
-                    round_num: match.round_num,
-                    p1_choice: match.p1_choice,
-                    p2_choice: match.p2_choice,
-                    winner: roundWinnerName
-                });
-
-                updateLeaderboard(roundWinnerName, 50, 0);
-                match.match_winner = roundWinnerName;
-                gameState.game_mode = "ROUND_OVER";
-
-                if (match.p1_wins >= 2 || match.p2_wins >= 2) {
-                    const finalWinner = match.p1_wins >= 2 ? match.challenger_name : match.champ_name;
-                    match.match_winner = finalWinner;
-
-                    if (finalWinner === match.challenger_name) {
-                        gameState.champion = { id: match.challenger_id, name: match.challenger_name, streak: 1 };
-                        updateLeaderboard(match.challenger_name, 150, 1);
-                        updateLeaderboard(match.champ_name, 0, -1);
-                    } else {
-                        if (gameState.champion) gameState.champion.streak++;
-                        updateLeaderboard(match.champ_name, 150, 1);
-                        updateLeaderboard(match.challenger_name, 0, -1);
-                    }
-                }
-            }
-
+        // Check if both have chosen; if not, broadcast immediately so the UI reflects the lock-in
+        if (!(match.p1_choice_made && match.p2_choice_made)) {
             broadcastState();
-
-            clearAdvanceTimeout();
-            autoAdvanceTimeout = setTimeout(() => {
-                advanceRound();
-            }, ROUND_RESULT_DELAY_MS);
-
             return;
         }
 
+        // Both choices are in — evaluate round outcome instantly
+        let roundWinnerName = null;
+
+        if (match.p1_choice === match.p2_choice) {
+            match.match_winner = "Tie (Re-throw!)";
+            match.history.push({
+                round_num: match.round_num,
+                p1_choice: match.p1_choice,
+                p2_choice: match.p2_choice,
+                winner: "Tie"
+            });
+            gameState.game_mode = "ROUND_OVER";
+        } else if (
+            (match.p1_choice === 'BUN' && match.p2_choice === 'CROISSANT') ||
+            (match.p1_choice === 'TORTILLA' && match.p2_choice === 'BUN') ||
+            (match.p1_choice === 'CROISSANT' && match.p2_choice === 'TORTILLA')
+        ) {
+            match.p1_wins++;
+            roundWinnerName = match.challenger_name;
+        } else {
+            match.p2_wins++;
+            roundWinnerName = match.champ_name;
+        }
+
+        if (roundWinnerName) {
+            match.history.push({
+                round_num: match.round_num,
+                p1_choice: match.p1_choice,
+                p2_choice: match.p2_choice,
+                winner: roundWinnerName
+            });
+
+            updateLeaderboard(roundWinnerName, 50, 0);
+            match.match_winner = roundWinnerName;
+            gameState.game_mode = "ROUND_OVER";
+
+            if (match.p1_wins >= 2 || match.p2_wins >= 2) {
+                const finalWinner = match.p1_wins >= 2 ? match.challenger_name : match.champ_name;
+                match.match_winner = finalWinner;
+
+                if (finalWinner === match.challenger_name) {
+                    gameState.champion = { id: match.challenger_id, name: match.challenger_name, streak: 1 };
+                    updateLeaderboard(match.challenger_name, 150, 1);
+                    updateLeaderboard(match.champ_name, 0, -1);
+                } else {
+                    if (gameState.champion) gameState.champion.streak++;
+                    updateLeaderboard(match.champ_name, 150, 1);
+                    updateLeaderboard(match.challenger_name, 0, -1);
+                }
+            }
+        }
+
+        // Broadcast final results for this round immediately
         broadcastState();
+
+        clearAdvanceTimeout();
+        autoAdvanceTimeout = setTimeout(() => {
+            advanceRound();
+        }, ROUND_RESULT_DELAY_MS);
     });
 
     socket.on('reset_game', () => {
