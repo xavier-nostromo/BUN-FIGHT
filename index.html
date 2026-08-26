@@ -9,6 +9,18 @@
 </head>
 <body class="bg-amber-50 text-slate-800 min-h-screen font-sans flex flex-col items-center p-4">
 
+    <!-- SCREEN: Splash / Intro Screen -->
+    <div id="screen-splash" class="fixed inset-0 bg-amber-950 z-50 flex flex-col items-center justify-center p-4 text-center text-white space-y-6">
+        <div class="space-y-2">
+            <span class="text-6xl animate-bounce inline-block">🥐🥯🫓</span>
+            <h1 class="text-4xl md:text-5xl font-black tracking-wider text-amber-300">BUN-FIGHT</h1>
+            <p class="text-xs md:text-sm text-amber-200/80 tracking-widest uppercase font-semibold">The Ultimate Bakery Battle Arena</p>
+        </div>
+        <button onclick="dismissSplash()" class="bg-amber-500 hover:bg-amber-400 text-amber-950 font-black px-8 py-3 rounded-xl text-lg transition-transform transform hover:scale-105 shadow-xl animate-pulse">
+            PRESS START 🕹️
+        </button>
+    </div>
+
     <!-- Header / Nav -->
     <header class="w-full max-w-2xl bg-amber-900 text-white p-4 rounded-xl shadow-lg flex justify-between items-center mb-6">
         <div>
@@ -25,7 +37,7 @@
     <main class="w-full max-w-2xl">
 
         <!-- SCREEN: Join Game -->
-        <div id="screen-join" class="bg-white p-6 rounded-2xl shadow-md border border-amber-200 text-center">
+        <div id="screen-join" class="hidden bg-white p-6 rounded-2xl shadow-md border border-amber-200 text-center">
             <h2 class="text-xl font-bold text-amber-900 mb-2">Enter the Arena</h2>
             <p class="text-sm text-slate-500 mb-4">Choose your nickname to join the queue and challenge the champion.</p>
             <form onsubmit="joinGame(event)" class="flex flex-col gap-3 max-w-xs mx-auto">
@@ -205,10 +217,6 @@
             'CROISSANT': '🥐 CROISSANT' 
         };
 
-        // Nicknames are player-supplied and get inserted via innerHTML below
-        // (queue list, leaderboard, round history). The server strips angle
-        // brackets, but this is the actual defense: escape before render so
-        // a name can never be interpreted as markup by any client watching.
         function escapeHtml(str) {
             const div = document.createElement('div');
             div.textContent = str == null ? '' : String(str);
@@ -230,6 +238,20 @@
         window.addEventListener('click', () => {
             getAudioContext();
         }, { once: true });
+
+        // Function to handle dismissing the splash screen
+        function dismissSplash() {
+            getAudioContext(); // Initialize audio context on user interaction
+            document.getElementById('screen-splash').classList.add('hidden');
+            
+            // If viewing the host route, keep join screen hidden and show dashboard
+            if (window.location.pathname === '/host') {
+                document.getElementById('screen-dashboard').classList.remove('hidden');
+            } else if (!myName) {
+                // If normal player and not yet named, show the join screen
+                document.getElementById('screen-join').classList.remove('hidden');
+            }
+        }
 
         function playTicTocSound() {
             const ctx = getAudioContext();
@@ -343,8 +365,6 @@
 
         function initHostCheck() {
             if (window.location.pathname === '/host') {
-                document.getElementById('screen-join').classList.add('hidden');
-                document.getElementById('screen-dashboard').classList.remove('hidden');
                 switchView('host');
             }
         }
@@ -370,7 +390,6 @@
             const attemptedName = inputVal || myName;
             if (!attemptedName) return;
 
-            // Don't commit to myName/localStorage until the server confirms the join
             pendingJoinName = attemptedName;
             socket.emit('join_game', { name: attemptedName });
         }
@@ -431,7 +450,6 @@
         socket.on('state_update', (state) => {
             const isHostRoute = window.location.pathname === '/host';
 
-            // A pending join succeeds once our name shows up anywhere in server state.
             if (pendingJoinName) {
                 const nameIsLive =
                     (state.champion && state.champion.name === pendingJoinName) ||
@@ -442,7 +460,9 @@
                 }
             }
 
-            if (state.game_mode === "WAITING" && !state.champion && state.queue.length === 0 && !isHostRoute) {
+            // Only auto-show the join screen if the splash screen has already been cleared
+            const splashHidden = document.getElementById('screen-splash').classList.contains('hidden');
+            if (splashHidden && state.game_mode === "WAITING" && !state.champion && state.queue.length === 0 && !isHostRoute) {
                 document.getElementById('screen-dashboard').classList.add('hidden');
                 document.getElementById('screen-join').classList.remove('hidden');
             }
@@ -529,13 +549,6 @@
                     hostInactive.classList.add('hidden');
                     hostActive.classList.remove('hidden');
 
-                    // A brand-new match always starts with an empty history
-                    // array. Reset the counter here too - relying only on
-                    // the game_mode === "WAITING" reset above misses the
-                    // common case where the queue never empties out (a
-                    // champion beating challengers back-to-back), which
-                    // left the counter stuck at the previous match's peak
-                    // and silently suppressed every future victory modal.
                     if (state.match.history.length === 0) {
                         lastProcessedHistoryLength = 0;
                     }
@@ -634,7 +647,7 @@
 
                     const roundWinner = state.match.match_winner;
                     if (roundWinner && roundWinner.includes("Tie")) {
-                        document.getElementById('result-winner-text').innerText = "IT'S A TIE!";
+                        document.getElementById('result-winner-text').innerText = "IT'SA TIE!";
                     } else {
                         document.getElementById('result-winner-text').innerText = `${roundWinner} Wins Round!`;
                     }
@@ -643,14 +656,6 @@
                         lastProcessedHistoryLength = history.length;
                         const lastRound = history[history.length - 1];
 
-                        // The reward modal requires a manual "Continue" click
-                        // to dismiss. That's fine on a player's own device,
-                        // but the host page is meant to run unattended on a
-                        // big screen - a stuck modal there would block the
-                        // live status/stats display until someone walks over
-                        // to dismiss it. The inline "Wins Round!" banner
-                        // above already covers the host view without
-                        // needing any interaction.
                         if (!isHostRoute && lastRound.winner === myName) {
                             const isMatchEnd = state.match.p1_wins >= 2 || state.match.p2_wins >= 2;
                             triggerVictoryReward(isMatchEnd, lastRound.round_num, myName);
