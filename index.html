@@ -29,7 +29,10 @@
             <h2 class="text-xl font-bold text-amber-900 mb-2">Enter the Arena</h2>
             <p class="text-sm text-slate-500 mb-4">Choose your nickname to join the queue and challenge the champion.</p>
             <form onsubmit="joinGame(event)" class="flex flex-col gap-3 max-w-xs mx-auto">
-                <input type="text" id="nickname" placeholder="Enter Nickname..." required maxlength="20" class="border-2 border-amber-300 p-2.5 rounded-lg focus:outline-none focus:border-amber-600 text-center font-bold text-slate-700">
+                <input type="text" id="nickname" placeholder="e.g. BUNBOSS" required maxlength="6"
+                    oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6)"
+                    class="border-2 border-amber-300 p-2.5 rounded-lg focus:outline-none focus:border-amber-600 text-center font-bold text-slate-700 uppercase tracking-widest">
+                <p class="text-xs text-amber-700 font-semibold -mt-1">🕹️ Retro arena rules: letters only, 6 characters max, ALL CAPS — like a high-score board!</p>
                 <p id="join-error" class="hidden text-red-600 text-xs font-semibold"></p>
                 <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">Join Matchmaking</button>
             </form>
@@ -363,7 +366,7 @@
         function joinGame(e) {
             if (e) e.preventDefault();
             clearJoinError();
-            const inputVal = document.getElementById('nickname').value.trim();
+            const inputVal = document.getElementById('nickname').value.trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6);
             const attemptedName = inputVal || myName;
             if (!attemptedName) return;
 

@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 5000;
 // Lock this down to your deployed frontend origin in production, e.g.
 // CORS_ORIGIN=https://your-app.onrender.com
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
-const MAX_NAME_LENGTH = 20;
+const MAX_NAME_LENGTH = 6;
 const ROUND_RESULT_DELAY_MS = 3500;
 
 const app = express();
@@ -90,10 +90,12 @@ function buildPublicState() {
 // ---------------------------------------------------------------------------
 function sanitizeName(rawName) {
     if (typeof rawName !== 'string') return '';
-    // Strip angle brackets so a nickname can never contain a raw HTML tag.
-    // The client also escapes names before rendering (defense in depth) -
-    // this stops the payload at the source too.
-    return rawName.trim().replace(/[<>]/g, '').slice(0, MAX_NAME_LENGTH);
+    // Retro arcade high-score handle: A-Z only, max 6 chars, always upper.
+    // Stripping everything but letters also means no HTML-special
+    // character (<, >, quotes, etc.) can ever survive sanitization, so
+    // this subsumes the earlier angle-bracket strip as a stronger
+    // defense against the nickname being used to inject markup.
+    return rawName.toUpperCase().replace(/[^A-Z]/g, '').slice(0, MAX_NAME_LENGTH);
 }
 
 // All player-identity comparisons in this file should go through this
@@ -231,7 +233,7 @@ io.on('connection', (socket) => {
     socket.on('join_game', (data) => {
         const rawName = sanitizeName(data && data.name);
         if (!rawName) {
-            socket.emit('join_error', { message: 'Enter a nickname to join.' });
+            socket.emit('join_error', { message: 'Enter a nickname (letters only, up to 6 characters) to join.' });
             return;
         }
 
