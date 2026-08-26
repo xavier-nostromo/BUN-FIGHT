@@ -333,7 +333,6 @@
         }
 
         function triggerVictoryReward(isMatchEnd, roundNum, winnerName) {
-            // Do not show popups if we are currently looking at the host view
             if (!document.getElementById('view-host').classList.contains('hidden')) return;
 
             playVictoryMelody();
@@ -360,7 +359,6 @@
         }
 
         function triggerDefeatReward(isMatchEnd, roundNum, winnerName) {
-            // Do not show popups if we are currently looking at the host view
             if (!document.getElementById('view-host').classList.contains('hidden')) return;
 
             playDefeatMelody();
@@ -590,11 +588,17 @@
                     document.getElementById('hm-p1-wins').innerText = state.match.p1_wins;
                     document.getElementById('hm-p2-wins').innerText = state.match.p2_wins;
 
-                    document.getElementById('hm-p1-status').innerText = state.match.p1_choice_made ? "🔒 Locked In" : "🤔 Choosing...";
-                    document.getElementById('hm-p1-status').className = `mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold ${state.match.p1_choice_made ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700 animate-pulse'}`;
+                    // Fixed: Explicitly reference player 1 and player 2 states reliably for the host monitor view
+                    const p1Locked = state.match.p1_choice_made;
+                    const p2Locked = state.match.p2_choice_made;
+
+                    const hmP1Status = document.getElementById('hm-p1-status');
+                    hmP1Status.innerText = p1Locked ? "🔒 Locked In" : "🤔 Choosing...";
+                    hmP1Status.className = `mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold ${p1Locked ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700 animate-pulse'}`;
                     
-                    document.getElementById('hm-p2-status').innerText = state.match.p2_choice_made ? "🔒 Locked In" : "🤔 Choosing...";
-                    document.getElementById('hm-p2-status').className = `mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold ${state.match.p2_choice_made ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700 animate-pulse'}`;
+                    const hmP2Status = document.getElementById('hm-p2-status');
+                    hmP2Status.innerText = p2Locked ? "🔒 Locked In" : "🤔 Choosing...";
+                    hmP2Status.className = `mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold ${p2Locked ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700 animate-pulse'}`;
 
                     const history = state.match.history;
                     let historyList = document.getElementById('host-history-list');
@@ -626,7 +630,7 @@
                     if (isParticipant) {
                         battleControls.classList.remove('hidden');
                         const amIChallenger = (state.match.challenger_name === myName);
-                        const myChoiceMade = amIChallenger ? state.match.p1_choice_made : state.match.p2_choice_made;
+                        const myChoiceMade = amIChallenger ? p1Locked : p2Locked;
                         
                         document.getElementById('match-score-display').innerText = `Match ${history.length + 1} of 3 (Best of 3) — Tally: ${state.match.p1_wins} - ${state.match.p2_wins}`;
 
