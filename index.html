@@ -1,205 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BUN-FIGHT</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-</head>
-<body class="bg-amber-50 text-slate-800 min-h-screen font-sans flex flex-col items-center p-4">
-
-    <!-- SCREEN: Splash / Intro Screen -->
-    <div id="screen-splash" class="fixed inset-0 bg-amber-950 z-50 flex flex-col items-center justify-center p-6 text-center text-white space-y-6 overflow-y-auto">
-        <div class="space-y-3 flex flex-col items-center">
-            <div class="flex items-center justify-center gap-4 animate-bounce">
-                <img src="images/cro.png" alt="Croissant" class="w-28 h-28 object-contain drop-shadow-lg" onerror="this.src='https://via.placeholder.com/112?text=🥐'">
-                <img src="images/bun.png" alt="Bun" class="w-28 h-28 object-contain drop-shadow-lg" onerror="this.src='https://via.placeholder.com/112?text=🥯'">
-                <img src="images/tor.png" alt="Tortilla" class="w-28 h-28 object-contain drop-shadow-lg" onerror="this.src='https://via.placeholder.com/112?text=🫓'">
-            </div>
-            <h1 class="text-3xl sm:text-5xl font-black tracking-wider text-amber-300">BUN-FIGHT</h1>
-            <p class="text-xs sm:text-sm text-amber-200/80 tracking-widest uppercase font-semibold">The Ultimate Bakery Battle Arena</p>
-        </div>
-        <button onclick="dismissSplash()" class="bg-amber-500 hover:bg-amber-400 text-amber-950 font-black px-8 py-3.5 rounded-xl text-base sm:text-lg transition-transform transform active:scale-95 shadow-xl animate-pulse flex items-center gap-2 cursor-pointer">
-            <span>PRESS START</span>
-            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-    </div>
-
-    <!-- Header / Nav -->
-    <header class="w-full max-w-2xl bg-amber-900 text-white p-4 rounded-xl shadow-lg flex justify-between items-center mb-6">
-        <div>
-            <h1 class="text-2xl font-black tracking-wider">🥯 BUN-FIGHT 🥐</h1>
-            <p id="display-my-name" class="text-xs text-amber-200 mt-0.5 font-medium">Not joined</p>
-        </div>
-        <div class="flex gap-2">
-            <button id="btn-player-view" onclick="switchView('player')" class="bg-amber-700 px-3 py-1 rounded text-sm font-semibold cursor-pointer">Player</button>
-            <button id="btn-host-view" onclick="switchView('host')" class="bg-amber-800 px-3 py-1 rounded text-sm font-semibold opacity-75 cursor-pointer">Host View</button>
-        </div>
-    </header>
-
-    <!-- Main Container -->
-    <main class="w-full max-w-2xl">
-
-        <!-- SCREEN: Join Game -->
-        <div id="screen-join" class="bg-white p-6 rounded-2xl shadow-md border border-amber-200 text-center">
-            <h2 class="text-xl font-bold text-amber-900 mb-2">Enter the Arena</h2>
-            <p class="text-sm text-slate-500 mb-4">Choose your nickname to join the queue and challenge the champion.</p>
-            <form onsubmit="joinGame(event)" class="flex flex-col gap-3 max-w-xs mx-auto">
-                <input type="text" id="nickname" placeholder="e.g. BUNBOSS" required maxlength="6"
-                    oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6)"
-                    class="border-2 border-amber-300 p-2.5 rounded-lg focus:outline-none focus:border-amber-600 text-center font-bold text-slate-700 uppercase tracking-widest">
-                <p class="text-xs text-amber-700 font-semibold -mt-1">🕹️ Retro arena rules: letters only, 6 characters max, ALL CAPS!</p>
-                <p id="join-error" class="hidden text-red-600 text-xs font-semibold"></p>
-                <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow cursor-pointer">Join Matchmaking</button>
-            </form>
-        </div>
-
-        <!-- SCREEN: Dashboard -->
-        <div id="screen-dashboard" class="hidden space-y-6">
-
-            <!-- PLAYER VIEW -->
-            <div id="view-player" class="space-y-4">
-                
-                <!-- Status Banner -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-amber-200 text-center">
-                    <h3 id="player-status-title" class="text-xl font-extrabold text-amber-900">Waiting...</h3>
-                    <p id="player-status-desc" class="text-xs text-slate-500 mt-1">Checking arena status...</p>
-                    
-                    <!-- Start Match Manual Trigger -->
-                    <div id="start-match-container" class="hidden mt-3">
-                        <button onclick="socket.emit('start_match_manual')" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors shadow cursor-pointer">
-                            🚀 Start Match Now
-                        </button>
-                    </div>
-
-                    <div class="flex justify-center gap-6 mt-4 pt-3 border-t border-slate-100 text-xs">
-                        <div>
-                            <span class="text-slate-400 block uppercase font-bold">Your Streak</span>
-                            <span id="my-streak" class="text-lg font-black text-amber-600">0</span>
-                        </div>
-                        <div>
-                            <span class="text-slate-400 block uppercase font-bold">Your ESP Rating</span>
-                            <span id="my-esp" class="text-lg font-black text-indigo-600">100</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Battle Controls (Visible when active player) -->
-                <div id="battle-controls" class="hidden bg-white p-5 rounded-xl shadow-md border-2 border-amber-400 text-center space-y-4">
-                    <div class="flex justify-between items-center">
-                        <span id="match-score-display" class="text-xs font-bold bg-amber-100 text-amber-800 px-3 py-1 rounded-full">Round 1 | Best of 3</span>
-                        <span id="choice-status-badge" class="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm">Make your move!</span>
-                    </div>
-
-                    <div class="grid grid-cols-3 gap-3 pt-2">
-                        <button onclick="makeChoice('BUN')" class="choice-btn bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 p-4 rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer">
-                            <span class="text-3xl">🥯</span>
-                            <span class="font-extrabold text-amber-900 text-xs">BUN</span>
-                        </button>
-                        <button onclick="makeChoice('CROISSANT')" class="choice-btn bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 p-4 rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer">
-                            <span class="text-3xl">🥐</span>
-                            <span class="font-extrabold text-amber-900 text-xs">CROISSANT</span>
-                        </button>
-                        <button onclick="makeChoice('TORTILLA')" class="choice-btn bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 p-4 rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer">
-                            <span class="text-3xl">🫓</span>
-                            <span class="font-extrabold text-amber-900 text-xs">TORTILLA</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- HOST VIEW -->
-            <div id="view-host" class="hidden space-y-4">
-                
-                <!-- Champion Display -->
-                <div class="bg-gradient-to-r from-amber-600 to-amber-800 text-white p-5 rounded-xl shadow-md flex justify-between items-center">
-                    <div>
-                        <span class="text-xs uppercase tracking-wider text-amber-200 font-bold block">Current Champion</span>
-                        <h3 id="host-champ-name" class="text-2xl font-black">No Champion Yet</h3>
-                    </div>
-                    <span id="host-champ-streak" class="bg-amber-900/50 px-3 py-1.5 rounded-lg text-lg font-bold border border-amber-500/30">🔥 0</span>
-                </div>
-
-                <!-- Match Monitor -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                    <!-- Inactive Match State -->
-                    <div id="host-match-inactive" class="text-center py-6 text-slate-400 font-medium text-sm">
-                        Waiting for players to initiate a match...
-                    </div>
-
-                    <!-- Active Match State -->
-                    <div id="host-match-active" class="hidden space-y-4">
-                        <div class="grid grid-cols-2 gap-4 text-center">
-                            <div class="bg-amber-50 p-3 rounded-lg border border-amber-100">
-                                <span class="text-xs text-slate-400 font-bold block uppercase">Challenger</span>
-                                <div id="hm-challenger-name" class="font-extrabold text-slate-800 text-lg">---</div>
-                                <div id="hm-p1-status" class="mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold bg-amber-100 text-amber-700">Active Match</div>
-                            </div>
-                            <div class="bg-amber-50 p-3 rounded-lg border border-amber-100">
-                                <span class="text-xs text-slate-400 font-bold block uppercase">Champion</span>
-                                <div id="hm-champ-name" class="font-extrabold text-slate-800 text-lg">---</div>
-                                <div id="hm-p2-status" class="mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold bg-amber-100 text-amber-700">Active Match</div>
-                            </div>
-                        </div>
-
-                        <div class="text-center font-black text-2xl text-amber-900">
-                            <span id="hm-p1-wins">0</span> - <span id="hm-p2-wins">0</span>
-                        </div>
-
-                        <!-- Match History -->
-                        <div>
-                            <h4 class="text-xs font-bold text-slate-400 uppercase mb-2">Round History & Results</h4>
-                            <div id="host-history-list" class="space-y-1 max-h-36 overflow-y-auto text-xs"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Admin Tools -->
-                <div class="flex justify-end">
-                    <button onclick="resetGame()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer">Reset Game State</button>
-                </div>
-            </div>
-
-            <!-- Queue & Leaderboard Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Queue Panel -->
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <div class="flex justify-between items-center mb-3">
-                        <h4 class="font-bold text-slate-700 text-sm">Matchmaking Queue</h4>
-                        <span id="queue-count" class="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-500 font-semibold">0 waiting</span>
-                    </div>
-                    <ul id="queue-list" class="space-y-1.5 max-h-48 overflow-y-auto">
-                        <li class="text-slate-400 text-sm text-center py-2">Queue is empty</li>
-                    </ul>
-                </div>
-
-                <!-- Leaderboard Panel -->
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <h4 class="font-bold text-slate-700 text-sm mb-3">ESP Leaderboard</h4>
-                    <ul id="leaderboard-list" class="space-y-1.5 max-h-48 overflow-y-auto">
-                        <li class="text-slate-400 text-sm text-center py-2">No psychic energy detected</li>
-                    </ul>
-                </div>
-            </div>
-
-        </div>
-    </main>
-
-    <!-- Reward / Pop-up Modal -->
-    <div id="reward-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl max-w-xs w-full p-6 text-center space-y-3 shadow-2xl">
-            <div id="reward-icon" class="text-5xl">👑</div>
-            <h3 id="reward-title" class="text-xl font-black text-amber-900">VICTORY!</h3>
-            <p id="reward-desc" class="text-xs text-slate-600"></p>
-            <div id="reward-bonus" class="inline-block bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full"></div>
-            <div>
-                <button onclick="closeRewardModal()" class="w-full mt-2 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-lg text-sm transition-colors cursor-pointer">Continue</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Script Logic -->
+<!-- Script Logic -->
     <script>
         window.addEventListener('DOMContentLoaded', () => {
             if (window.location.pathname === '/host') {
@@ -214,7 +13,7 @@
         });
 
         const socket = io({
-            transports: ['websocket'], // Force pure WebSocket transport to completely bypass polling delays
+            transports: ['websocket'],
             upgrade: false
         });
         
@@ -223,6 +22,7 @@
         let lastProcessedHistoryLength = 0; 
         let wasInGame = false; 
         let pendingJoinName = null;
+        let lastKnownRoundNum = 0;
 
         const emojiMap = { 
             'BUN': '🥯 BUN', 
@@ -553,6 +353,7 @@
                 hostActive.classList.add('hidden');
                 battleControls.classList.add('hidden');
                 lastProcessedHistoryLength = 0;
+                lastKnownRoundNum = 0;
                 
                 const qIdx = state.queue.findIndex(q => q.name === myName);
                 const isChamp = state.champion && state.champion.name === myName;
@@ -576,12 +377,21 @@
             } else {
                 startMatchContainer.classList.add('hidden');
 
-                if (state.game_mode === "MATCH_IN_PROGRESS" && state.match) {
+                if (state.game_mode === "MATCH_IN_PROGRESS" || state.game_mode === "ROUND_OVER") {
                     hostInactive.classList.add('hidden');
                     hostActive.classList.remove('hidden');
 
-                    if (state.match.history.length === 0) {
-                        lastProcessedHistoryLength = 0;
+                    const isMatchPlayer = state.match && (namesMatch(state.match.challenger_name, myName) || namesMatch(state.match.champ_name, myName));
+                    if (isMatchPlayer && state.game_mode === "MATCH_IN_PROGRESS") {
+                        battleControls.classList.remove('hidden');
+                        
+                        // Check if round advanced to re-enable choice buttons
+                        if (state.match.round_num !== lastKnownRoundNum) {
+                            resetPlayerButtons();
+                            lastKnownRoundNum = state.match.round_num;
+                        }
+                    } else {
+                        battleControls.classList.add('hidden');
                     }
 
                     document.getElementById('hm-challenger-name').innerText = state.match.challenger_name;
@@ -589,7 +399,6 @@
                     document.getElementById('hm-p1-wins').innerText = state.match.p1_wins;
                     document.getElementById('hm-p2-wins').innerText = state.match.p2_wins;
 
-                    // Streamlined status message bypassing individual locks to speed up round transition rendering
                     const p1Locked = state.match.p1_choice_made;
                     const p2Locked = state.match.p2_choice_made;
 
@@ -603,51 +412,24 @@
                     } else {
                         historyList.innerHTML = history.map(h => `
                             <div class="flex justify-between items-center bg-white px-3 py-1.5 rounded border border-slate-200">
-                                <span class="font-bold text-slate-700">Match ${h.round_num}</span>
-                                <span class="text-slate-600">${escapeHtml(state.match.challenger_name)} (${emojiMap[h.p1_choice] || h.p1_choice}) vs ${escapeHtml(state.match.champ_name)} (${emojiMap[h.p2_choice] || h.p2_choice})</span>
-                                <span class="font-extrabold text-amber-700">Winner: ${escapeHtml(h.winner)}</span>
+                                <span class="font-bold text-slate-700">Round ${h.round_num}</span>
+                                <span class="text-slate-600">${escapeHtml(h.winner)} won (${escapeHtml(h.p1_choice)} vs ${escapeHtml(h.p2_choice)})</span>
                             </div>
                         `).join('');
                     }
 
-                    // Immediately process and trigger modal rewards as soon as history updates
-                    if (history.length > lastProcessedHistoryLength) {
+                    if (state.game_mode === "ROUND_OVER" && history.length > lastProcessedHistoryLength) {
                         lastProcessedHistoryLength = history.length;
                         const latestRound = history[history.length - 1];
-                        if (myName && (state.match.challenger_name === myName || state.match.champ_name === myName)) {
-                            if (latestRound.winner === myName) {
-                                triggerVictoryReward(false, latestRound.round_num, myName);
-                            } else {
-                                triggerDefeatReward(false, latestRound.round_num, latestRound.winner);
-                            }
-                        }
-                    }
-
-                    const isParticipant = myName && (state.match.challenger_name === myName || state.match.champ_name === myName);
-                    if (isParticipant) {
-                        battleControls.classList.remove('hidden');
-                        const amIChallenger = (state.match.challenger_name === myName);
-                        const myChoiceMade = amIChallenger ? p1Locked : p2Locked;
+                        const isMatchEnd = state.match.p1_wins >= 2 || state.match.p2_wins >= 2;
                         
-                        document.getElementById('match-score-display').innerText = `Match ${history.length + 1} of 3 (Best of 3) — Tally: ${state.match.p1_wins} - ${state.match.p2_wins}`;
-
-                        if (myChoiceMade) {
-                            stopTicToc();
-                            const badge = document.getElementById('choice-status-badge');
-                            badge.className = 'bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold';
-                            badge.innerText = `Choice Locked In! 🎯`;
-                            document.querySelectorAll('.choice-btn').forEach(b => b.classList.add('opacity-50', 'pointer-events-none'));
-                        } else {
-                            resetPlayerButtons();
-                            startTicToc();
+                        if (latestRound.winner === myName) {
+                            triggerVictoryReward(isMatchEnd, latestRound.round_num, latestRound.winner);
+                        } else if (latestRound.winner && latestRound.winner !== "Tie") {
+                            triggerDefeatReward(isMatchEnd, latestRound.round_num, latestRound.winner);
                         }
-                    } else {
-                        battleControls.classList.add('hidden');
-                        stopTicToc();
                     }
                 }
             }
         });
     </script>
-</body>
-</html>
