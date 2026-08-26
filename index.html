@@ -526,6 +526,17 @@
                     hostInactive.classList.add('hidden');
                     hostActive.classList.remove('hidden');
 
+                    // A brand-new match always starts with an empty history
+                    // array. Reset the counter here too - relying only on
+                    // the game_mode === "WAITING" reset above misses the
+                    // common case where the queue never empties out (a
+                    // champion beating challengers back-to-back), which
+                    // left the counter stuck at the previous match's peak
+                    // and silently suppressed every future victory modal.
+                    if (state.match.history.length === 0) {
+                        lastProcessedHistoryLength = 0;
+                    }
+
                     document.getElementById('hm-challenger-name').innerText = state.match.challenger_name;
                     document.getElementById('hm-champ-name').innerText = state.match.champ_name;
                     document.getElementById('hm-p1-wins').innerText = state.match.p1_wins;
