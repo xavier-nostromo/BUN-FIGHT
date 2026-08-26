@@ -642,8 +642,16 @@
                     if (history.length > lastProcessedHistoryLength) {
                         lastProcessedHistoryLength = history.length;
                         const lastRound = history[history.length - 1];
-                        
-                        if (lastRound.winner === myName) {
+
+                        // The reward modal requires a manual "Continue" click
+                        // to dismiss. That's fine on a player's own device,
+                        // but the host page is meant to run unattended on a
+                        // big screen - a stuck modal there would block the
+                        // live status/stats display until someone walks over
+                        // to dismiss it. The inline "Wins Round!" banner
+                        // above already covers the host view without
+                        // needing any interaction.
+                        if (!isHostRoute && lastRound.winner === myName) {
                             const isMatchEnd = state.match.p1_wins >= 2 || state.match.p2_wins >= 2;
                             triggerVictoryReward(isMatchEnd, lastRound.round_num, myName);
                         }
