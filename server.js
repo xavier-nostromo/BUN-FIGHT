@@ -18,7 +18,16 @@ const ROUND_RESULT_DELAY_MS = 3500;
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: CORS_ORIGIN } });
+const io = new Server(server, {
+    cors: { origin: CORS_ORIGIN },
+    // Defaults (pingInterval 25s + pingTimeout 20s) mean a dropped connection
+    // can take up to ~45s to be reaped, during which a rejoin under the same
+    // name gets a false "name taken" rejection (see README's known
+    // limitation). Tightening this shrinks that window to ~13s without being
+    // so aggressive that normal network jitter causes false disconnects.
+    pingInterval: 8000,
+    pingTimeout: 5000
+});
 
 app.use(express.static(__dirname));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -46,7 +55,30 @@ function clearAdvanceTimeout() {
 }
 
 function broadcastState() {
-    io.emit('state_update', gameState);
+    io.emit('state_update', buildPublicState());
+}
+
+// gameState.match.p1_choice / p2_choice hold the real picks as soon as a
+// player locks in, but the UI is only meant to reveal "locked in" vs
+// "choosing" until both sides have answered. Because previous versions
+// broadcast the full gameState verbatim, anyone with devtools open (the
+// opponent included) could read state.match.p1_choice/p2_choice straight
+// off the socket payload before making their own pick - a real fairness
+// hole for a rock-paper-scissors-style game. This strips the choice
+// values from the broadcast copy until both are in; the *_choice_made
+// booleans (which the UI actually uses) are left untouched.
+function buildPublicState() {
+    if (!gameState.match) return gameState;
+    const bothChosen = gameState.match.p1_choice_made && gameState.match.p2_choice_made;
+    if (bothChosen) return gameState;
+    return {
+        ...gameState,
+        match: {
+            ...gameState.match,
+            p1_choice: null,
+            p2_choice: null
+        }
+    };
 }
 
 // ---------------------------------------------------------------------------
@@ -58,20 +90,53 @@ function broadcastState() {
 // ---------------------------------------------------------------------------
 function sanitizeName(rawName) {
     if (typeof rawName !== 'string') return '';
-    return rawName.trim().slice(0, MAX_NAME_LENGTH);
+    // Strip angle brackets so a nickname can never contain a raw HTML tag.
+    // The client also escapes names before rendering (defense in depth) -
+    // this stops the payload at the source too.
+    return rawName.trim().replace(/[<>]/g, '').slice(0, MAX_NAME_LENGTH);
+}
+
+// All player-identity comparisons in this file should go through this
+// helper. Names are matched case-insensitively so "Bob" and "BOB" are
+// treated as the same person everywhere (join checks, leaderboard,
+// champion/match/queue lookups) instead of only in isNameTaken - a
+// mismatch there let a rejoin with different casing fork into a
+// duplicate identity (a stale champion slot + a fresh queue entry, or a
+// second leaderboard row that resets ESP/streak to zero).
+function namesMatch(a, b) {
+    return typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
 }
 
 function isNameTaken(name, excludeSocketId) {
     for (const [id, s] of io.sockets.sockets) {
-        if (id !== excludeSocketId && s.playerName && s.playerName.toLowerCase() === name.toLowerCase()) {
+        if (id !== excludeSocketId && s.playerName && namesMatch(s.playerName, name)) {
             return true;
         }
     }
     return false;
 }
 
+// If this name (case-insensitively) already corresponds to a known
+// identity somewhere in game state, return that identity's original
+// casing so state never fragments into two records for the same person.
+// Otherwise, the name is genuinely new and is returned as-is.
+function resolveCanonicalName(name) {
+    if (gameState.champion && namesMatch(gameState.champion.name, name)) {
+        return gameState.champion.name;
+    }
+    if (gameState.match) {
+        if (namesMatch(gameState.match.challenger_name, name)) return gameState.match.challenger_name;
+        if (namesMatch(gameState.match.champ_name, name)) return gameState.match.champ_name;
+    }
+    const inQueue = gameState.queue.find(q => namesMatch(q.name, name));
+    if (inQueue) return inQueue.name;
+    const onLeaderboard = gameState.leaderboard.find(p => namesMatch(p.name, name));
+    if (onLeaderboard) return onLeaderboard.name;
+    return name;
+}
+
 function updateLeaderboard(name, espChange, streakChange) {
-    let player = gameState.leaderboard.find(p => p.name === name);
+    let player = gameState.leaderboard.find(p => namesMatch(p.name, name));
     if (!player) {
         player = { id: '', name: name, esp_rating: 100, streak: 0 };
         gameState.leaderboard.push(player);
@@ -164,16 +229,21 @@ function startNextMatch() {
 
 io.on('connection', (socket) => {
     socket.on('join_game', (data) => {
-        const name = sanitizeName(data && data.name);
-        if (!name) {
+        const rawName = sanitizeName(data && data.name);
+        if (!rawName) {
             socket.emit('join_error', { message: 'Enter a nickname to join.' });
             return;
         }
 
-        if (isNameTaken(name, socket.id)) {
-            socket.emit('join_error', { message: `"${name}" is already in the arena. Pick another nickname.` });
+        if (isNameTaken(rawName, socket.id)) {
+            socket.emit('join_error', { message: `"${rawName}" is already in the arena. Pick another nickname.` });
             return;
         }
+
+        // If this is a rejoin under different casing of an existing
+        // identity (e.g. "Bob" -> "BOB"), snap back to the original casing
+        // so we update that identity instead of forking a new one.
+        const name = resolveCanonicalName(rawName);
 
         socket.playerName = name;
         updateLeaderboard(name, 0, 0);

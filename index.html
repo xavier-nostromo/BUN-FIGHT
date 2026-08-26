@@ -202,6 +202,16 @@
             'CROISSANT': '🥐 CROISSANT' 
         };
 
+        // Nicknames are player-supplied and get inserted via innerHTML below
+        // (queue list, leaderboard, round history). The server strips angle
+        // brackets, but this is the actual defense: escape before render so
+        // a name can never be interpreted as markup by any client watching.
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str == null ? '' : String(str);
+            return div.innerHTML;
+        }
+
         let audioCtx = null;
 
         function getAudioContext() {
@@ -450,7 +460,7 @@
             } else {
                 queueList.innerHTML = state.queue.map((q, idx) => `
                     <li class="bg-amber-50 px-3 py-2 rounded-lg text-sm font-semibold flex justify-between items-center border border-amber-100">
-                        <span>#${idx + 1} ${q.name}</span>
+                        <span>#${idx + 1} ${escapeHtml(q.name)}</span>
                         ${q.name === myName ? '<span class="text-xs bg-amber-500 text-white px-2 py-0.5 rounded">You</span>' : ''}
                     </li>
                 `).join('');
@@ -462,7 +472,7 @@
             } else {
                 lbList.innerHTML = state.leaderboard.map((p, idx) => `
                     <li class="flex justify-between items-center text-sm py-1.5 border-b border-slate-100 last:border-0">
-                        <span class="font-semibold text-slate-700">${idx === 0 ? '👑 ' : ''}${idx + 1}. ${p.name}</span>
+                        <span class="font-semibold text-slate-700">${idx === 0 ? '👑 ' : ''}${idx + 1}. ${escapeHtml(p.name)}</span>
                         <div class="text-right">
                             <span class="font-bold text-indigo-600">${p.esp_rating} ESP</span>
                         </div>
@@ -546,8 +556,8 @@
                         historyList.innerHTML = history.map(h => `
                             <div class="flex justify-between items-center bg-white px-3 py-1.5 rounded border border-slate-200">
                                 <span class="font-bold text-slate-700">Round ${h.round_num}</span>
-                                <span class="text-slate-600">${state.match.challenger_name} (${emojiMap[h.p1_choice] || h.p1_choice}) vs ${state.match.champ_name} (${emojiMap[h.p2_choice] || h.p2_choice})</span>
-                                <span class="font-extrabold text-amber-700">Winner: ${h.winner}</span>
+                                <span class="text-slate-600">${escapeHtml(state.match.challenger_name)} (${emojiMap[h.p1_choice] || h.p1_choice}) vs ${escapeHtml(state.match.champ_name)} (${emojiMap[h.p2_choice] || h.p2_choice})</span>
+                                <span class="font-extrabold text-amber-700">Winner: ${escapeHtml(h.winner)}</span>
                             </div>
                         `).join('');
                     }
@@ -598,8 +608,8 @@
                         historyList.innerHTML = history.map(h => `
                             <div class="flex justify-between items-center bg-white px-3 py-1.5 rounded border border-slate-200">
                                 <span class="font-bold text-slate-700">Round ${h.round_num}</span>
-                                <span class="text-slate-600">${state.match.challenger_name} (${emojiMap[h.p1_choice] || h.p1_choice}) vs ${state.match.champ_name} (${emojiMap[h.p2_choice] || h.p2_choice})</span>
-                                <span class="font-extrabold text-amber-700">Winner: ${h.winner}</span>
+                                <span class="text-slate-600">${escapeHtml(state.match.challenger_name)} (${emojiMap[h.p1_choice] || h.p1_choice}) vs ${escapeHtml(state.match.champ_name)} (${emojiMap[h.p2_choice] || h.p2_choice})</span>
+                                <span class="font-extrabold text-amber-700">Winner: ${escapeHtml(h.winner)}</span>
                             </div>
                         `).join('');
                     }
