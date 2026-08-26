@@ -134,14 +134,12 @@
                             <div class="bg-amber-50 p-3 rounded-lg border border-amber-100">
                                 <span class="text-xs text-slate-400 font-bold block uppercase">Challenger</span>
                                 <div id="hm-challenger-name" class="font-extrabold text-slate-800 text-lg">---</div>
-                                <div id="hm-p1-status" class="mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold bg-amber-100 text-amber-700">🤔 Choosing...</div>
-                                <div id="hm-p1-pattern" class="text-xs text-red-500 font-bold mt-1"></div>
+                                <div id="hm-p1-status" class="mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold bg-amber-100 text-amber-700">Active Match</div>
                             </div>
                             <div class="bg-amber-50 p-3 rounded-lg border border-amber-100">
                                 <span class="text-xs text-slate-400 font-bold block uppercase">Champion</span>
                                 <div id="hm-champ-name" class="font-extrabold text-slate-800 text-lg">---</div>
-                                <div id="hm-p2-status" class="mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold bg-amber-100 text-amber-700">🤔 Choosing...</div>
-                                <div id="hm-p2-pattern" class="text-xs text-red-500 font-bold mt-1"></div>
+                                <div id="hm-p2-status" class="mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold bg-amber-100 text-amber-700">Active Match</div>
                             </div>
                         </div>
 
@@ -203,7 +201,6 @@
 
     <!-- Script Logic -->
     <script>
-        // Auto-switch to host view if the URL path is /host
         window.addEventListener('DOMContentLoaded', () => {
             if (window.location.pathname === '/host') {
                 const splash = document.getElementById('screen-splash');
@@ -216,7 +213,10 @@
             }
         });
 
-        const socket = io();
+        const socket = io({
+            transports: ['websocket', 'polling'] // Force lower latency socket transport connection
+        });
+        
         let currentSid = null;
         let myName = localStorage.getItem('bun_fight_nickname') || '';
         let lastProcessedHistoryLength = 0; 
@@ -588,17 +588,12 @@
                     document.getElementById('hm-p1-wins').innerText = state.match.p1_wins;
                     document.getElementById('hm-p2-wins').innerText = state.match.p2_wins;
 
-                    // Fixed: Explicitly reference player 1 and player 2 states reliably for the host monitor view
+                    // Streamlined status message bypassing individual locks to speed up round transition rendering
                     const p1Locked = state.match.p1_choice_made;
                     const p2Locked = state.match.p2_choice_made;
 
-                    const hmP1Status = document.getElementById('hm-p1-status');
-                    hmP1Status.innerText = p1Locked ? "🔒 Locked In" : "🤔 Choosing...";
-                    hmP1Status.className = `mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold ${p1Locked ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700 animate-pulse'}`;
-                    
-                    const hmP2Status = document.getElementById('hm-p2-status');
-                    hmP2Status.innerText = p2Locked ? "🔒 Locked In" : "🤔 Choosing...";
-                    hmP2Status.className = `mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold ${p2Locked ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700 animate-pulse'}`;
+                    document.getElementById('hm-p1-status').innerText = p1Locked ? "⚡ Choice Logged" : "🤔 Choosing...";
+                    document.getElementById('hm-p2-status').innerText = p2Locked ? "⚡ Choice Logged" : "🤔 Choosing...";
 
                     const history = state.match.history;
                     let historyList = document.getElementById('host-history-list');
@@ -614,6 +609,7 @@
                         `).join('');
                     }
 
+                    // Immediately process and trigger modal rewards as soon as history updates
                     if (history.length > lastProcessedHistoryLength) {
                         lastProcessedHistoryLength = history.length;
                         const latestRound = history[history.length - 1];
