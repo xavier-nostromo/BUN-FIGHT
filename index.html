@@ -151,7 +151,7 @@
 
                         <!-- Match History -->
                         <div>
-                            <h4 class="text-xs font-bold text-slate-400 uppercase mb-2">Round History</h4>
+                            <h4 class="text-xs font-bold text-slate-400 uppercase mb-2">Round History & Results</h4>
                             <div id="host-history-list" class="space-y-1 max-h-36 overflow-y-auto text-xs"></div>
                         </div>
                     </div>
@@ -188,7 +188,7 @@
         </div>
     </main>
 
-    <!-- Reward Modal -->
+    <!-- Reward / Pop-up Modal -->
     <div id="reward-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-2xl max-w-xs w-full p-6 text-center space-y-3 shadow-2xl">
             <div id="reward-icon" class="text-5xl">👑</div>
@@ -242,7 +242,6 @@
             getAudioContext();
             document.getElementById('screen-splash').classList.add('hidden');
             
-            // If they already have a saved name, skip join screen and go straight to dashboard
             if (myName) {
                 document.getElementById('screen-dashboard').classList.remove('hidden');
                 document.getElementById('display-my-name').innerText = `👤 ${myName}`;
@@ -301,6 +300,25 @@
             });
         }
 
+        function playDefeatMelody() {
+            const ctx = getAudioContext();
+            const now = ctx.currentTime;
+            const notes = [330, 311, 293, 277];
+            
+            notes.forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(freq, now + (i * 0.18));
+                gain.gain.setValueAtTime(0.15, now + (i * 0.18));
+                gain.gain.exponentialRampToValueAtTime(0.001, now + (i * 0.18) + 0.3);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + (i * 0.18));
+                osc.stop(now + (i * 0.18) + 0.3);
+            });
+        }
+
         function triggerVictoryReward(isMatchEnd, roundNum, winnerName) {
             playVictoryMelody();
             if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
@@ -317,10 +335,34 @@
                 desc.innerText = `Incredible victory, ${winnerName}! You claimed ultimate supremacy!`;
                 bonus.innerText = `+150 ESP & Streak Bonus`;
             } else {
-                icon.innerText = "✨";
-                title.innerText = `Round ${roundNum} Won!`;
-                desc.innerText = "Fantastic prediction! You outsmarted your opponent.";
+                icon.innerText = "✨🥐";
+                title.innerText = `Round ${roundNum} Victory!`;
+                desc.innerText = "Fantastic prediction! You secured this round.";
                 bonus.innerText = `+50 ESP`;
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function triggerDefeatReward(isMatchEnd, roundNum, winnerName) {
+            playDefeatMelody();
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+
+            const modal = document.getElementById('reward-modal');
+            const title = document.getElementById('reward-title');
+            const desc = document.getElementById('reward-desc');
+            const bonus = document.getElementById('reward-bonus');
+            const icon = document.getElementById('reward-icon');
+
+            if (isMatchEnd) {
+                icon.innerText = "💥💀";
+                title.innerText = "YOU LOSE!";
+                desc.innerText = `${winnerName} took the crown. Try again, better luck next time!`;
+                bonus.innerText = `ESP Rating Adjusted`;
+            } else {
+                icon.innerText = "❌";
+                title.innerText = `Round ${roundNum} Lost`;
+                desc.innerText = "Try again! Better luck next time.";
+                bonus.innerText = `Keep your head up!`;
             }
             modal.classList.remove('hidden');
         }
@@ -441,7 +483,6 @@
                 }
             }
 
-            // Update Champion data
             if (state.champion) {
                 document.getElementById('host-champ-name').innerText = state.champion.name;
                 document.getElementById('host-champ-streak').innerText = `🔥 ${state.champion.streak}`;
@@ -450,7 +491,6 @@
                 document.getElementById('host-champ-streak').innerText = '🔥 0';
             }
 
-            // Update Queue
             const queueList = document.getElementById('queue-list');
             document.getElementById('queue-count').innerText = `${state.queue.length} waiting`;
             if (state.queue.length === 0) {
@@ -464,7 +504,6 @@
                 `).join('');
             }
 
-            // Update Leaderboard
             const lbList = document.getElementById('leaderboard-list');
             if (state.leaderboard.length === 0) {
                 lbList.innerHTML = `<li class="text-slate-400 text-sm text-center py-2">No psychic energy detected</li>`;
@@ -541,11 +580,11 @@
                     const history = state.match.history;
                     let historyList = document.getElementById('host-history-list');
                     if (!history || history.length === 0) {
-                        historyList.innerHTML = `<span class="text-slate-400 italic">No challenges played yet in this match.</span>`;
+                        historyList.innerHTML = `<span class="text-slate-400 italic">No matches played yet in this round series.</span>`;
                     } else {
                         historyList.innerHTML = history.map(h => `
                             <div class="flex justify-between items-center bg-white px-3 py-1.5 rounded border border-slate-200">
-                                <span class="font-bold text-slate-700">Round ${h.round_num}</span>
+                                <span class="font-bold text-slate-700">Match ${h.round_num}</span>
                                 <span class="text-slate-600">${escapeHtml(state.match.challenger_name)} (${emojiMap[h.p1_choice] || h.p1_choice}) vs ${escapeHtml(state.match.champ_name)} (${emojiMap[h.p2_choice] || h.p2_choice})</span>
                                 <span class="font-extrabold text-amber-700">Winner: ${escapeHtml(h.winner)}</span>
                             </div>
@@ -558,6 +597,8 @@
                         if (myName && (state.match.challenger_name === myName || state.match.champ_name === myName)) {
                             if (latestRound.winner === myName) {
                                 triggerVictoryReward(false, latestRound.round_num, myName);
+                            } else {
+                                triggerDefeatReward(false, latestRound.round_num, latestRound.winner);
                             }
                         }
                     }
@@ -568,7 +609,7 @@
                         const amIChallenger = (state.match.challenger_name === myName);
                         const myChoiceMade = amIChallenger ? state.match.p1_choice_made : state.match.p2_choice_made;
                         
-                        document.getElementById('match-score-display').innerText = `Round ${history.length + 1} | Best of 3 (${state.match.p1_wins} - ${state.match.p2_wins})`;
+                        document.getElementById('match-score-display').innerText = `Match ${history.length + 1} of 3 (Best of 3) — Tally: ${state.match.p1_wins} - ${state.match.p2_wins}`;
 
                         if (myChoiceMade) {
                             stopTicToc();
