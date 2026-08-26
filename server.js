@@ -1,5 +1,5 @@
 // BUN-FIGHT server
-// Consolidated Node/Express + Socket.IO backend (replaces the old Flask/app.py twin).
+// Consolidated Node/Express + Socket.IO backend.
 
 const express = require('express');
 const http = require('http');
@@ -7,7 +7,7 @@ const path = require('path');
 const { Server } = require('socket.io');
 
 // ---------------------------------------------------------------------------
-// Config (env-driven so the same code works locally and on a free host)
+// Config
 // ---------------------------------------------------------------------------
 const PORT = process.env.PORT || 5000;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
@@ -209,9 +209,15 @@ io.on('connection', (socket) => {
         socket.playerName = name;
         updateLeaderboard(name, 0, 0);
 
+        let isMatchPlayer = false;
         if (gameState.match) {
-            if (namesMatch(gameState.match.challenger_name, name)) gameState.match.challenger_id = socket.id;
-            if (namesMatch(gameState.match.champ_name, name)) gameState.match.champ_id = socket.id;
+            if (namesMatch(gameState.match.challenger_name, name)) {
+                gameState.match.challenger_id = socket.id;
+                isMatchPlayer = true;
+            } else if (namesMatch(gameState.match.champ_name, name)) {
+                gameState.match.champ_id = socket.id;
+                isMatchPlayer = true;
+            }
         }
 
         if (gameState.champion && namesMatch(gameState.champion.name, name)) {
@@ -219,9 +225,6 @@ io.on('connection', (socket) => {
         }
 
         gameState.queue = gameState.queue.filter(q => !namesMatch(q.name, name));
-
-        const isMatchPlayer = gameState.match &&
-            (namesMatch(gameState.match.challenger_name, name) || namesMatch(gameState.match.champ_name, name));
 
         if (!gameState.champion) {
             gameState.champion = { id: socket.id, name: name, streak: 0 };
@@ -231,6 +234,7 @@ io.on('connection', (socket) => {
             }
         }
 
+        // Only auto-start if waiting and we have enough players
         if (gameState.game_mode === "WAITING" && gameState.champion && gameState.queue.length > 0) {
             startNextMatch();
         } else {
@@ -369,17 +373,9 @@ io.on('connection', (socket) => {
         const name = socket.playerName;
         if (!name) return;
 
+        // Keep queue clean, but avoid destroying active matches instantly on minor drops 
+        // unless explicitly needed. Match persistence protects active games.
         gameState.queue = gameState.queue.filter(q => !namesMatch(q.name, name));
-        if (gameState.champion && namesMatch(gameState.champion.name, name)) {
-            clearAdvanceTimeout();
-            gameState.champion = null;
-            gameState.game_mode = "WAITING";
-            gameState.match = null;
-        } else if (gameState.match && (namesMatch(gameState.match.challenger_name, name) || namesMatch(gameState.match.champ_name, name))) {
-            clearAdvanceTimeout();
-            gameState.game_mode = "WAITING";
-            gameState.match = null;
-        }
         broadcastState();
     });
 
