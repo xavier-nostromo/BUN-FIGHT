@@ -280,10 +280,16 @@ io.on('connection', (socket) => {
     });
 
     socket.on('make_choice', (data) => {
-        if (!gameState.match || gameState.game_mode !== "MATCH_IN_PROGRESS") {
-            console.log(`[IGNORED CHOICE] From ${socket.playerName}: game_mode is ${gameState.game_mode}`);
+        if (!gameState.match) {
+            console.log(`[DROPPED CHOICE] From ${socket.playerName}: No active match exists.`);
             return;
         }
+        
+        if (gameState.game_mode !== "MATCH_IN_PROGRESS") {
+            console.log(`[DROPPED CHOICE] From ${socket.playerName}: game_mode is currently ${gameState.game_mode}`);
+            return;
+        }
+
         const choice = data && data.choice;
         if (!['BUN', 'CROISSANT', 'TORTILLA'].includes(choice)) return;
 
@@ -299,7 +305,7 @@ io.on('connection', (socket) => {
             match.p2_choice = choice;
             match.p2_choice_made = true;
         } else {
-            console.log(`[IGNORED CHOICE] Unknown player trying to play: ${name}`);
+            console.log(`[DROPPED CHOICE] Unknown or spectator player trying to play: ${name}`);
             return; 
         }
 
