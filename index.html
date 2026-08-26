@@ -13,14 +13,14 @@
     <div id="screen-splash" class="fixed inset-0 bg-amber-950 z-50 flex flex-col items-center justify-center p-6 text-center text-white space-y-6 overflow-y-auto">
         <div class="space-y-3 flex flex-col items-center">
             <div class="flex items-center justify-center gap-4 animate-bounce">
-                <img src="images/cro.png" alt="Croissant" class="w-28 h-28 object-contain drop-shadow-lg">
-                <img src="images/bun.png" alt="Bun" class="w-28 h-28 object-contain drop-shadow-lg">
-                <img src="images/tor.png" alt="Tortilla" class="w-28 h-28 object-contain drop-shadow-lg">
+                <img src="images/cro.png" alt="Croissant" class="w-28 h-28 object-contain drop-shadow-lg" onerror="this.src='https://via.placeholder.com/112?text=🥐'">
+                <img src="images/bun.png" alt="Bun" class="w-28 h-28 object-contain drop-shadow-lg" onerror="this.src='https://via.placeholder.com/112?text=🥯'">
+                <img src="images/tor.png" alt="Tortilla" class="w-28 h-28 object-contain drop-shadow-lg" onerror="this.src='https://via.placeholder.com/112?text=🫓'">
             </div>
             <h1 class="text-3xl sm:text-5xl font-black tracking-wider text-amber-300">BUN-FIGHT</h1>
             <p class="text-xs sm:text-sm text-amber-200/80 tracking-widest uppercase font-semibold">The Ultimate Bakery Battle Arena</p>
         </div>
-        <button onclick="dismissSplash()" class="bg-amber-500 hover:bg-amber-400 text-amber-950 font-black px-8 py-3.5 rounded-xl text-base sm:text-lg transition-transform transform active:scale-95 shadow-xl animate-pulse flex items-center gap-2">
+        <button onclick="dismissSplash()" class="bg-amber-500 hover:bg-amber-400 text-amber-950 font-black px-8 py-3.5 rounded-xl text-base sm:text-lg transition-transform transform active:scale-95 shadow-xl animate-pulse flex items-center gap-2 cursor-pointer">
             <span>PRESS START</span>
             <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         </button>
@@ -30,11 +30,11 @@
     <header class="w-full max-w-2xl bg-amber-900 text-white p-4 rounded-xl shadow-lg flex justify-between items-center mb-6">
         <div>
             <h1 class="text-2xl font-black tracking-wider">🥯 BUN-FIGHT 🥐</h1>
-            <p id="display-my-name" class="text-xs text-amber-200 mt-0.5 font-medium"></p>
+            <p id="display-my-name" class="text-xs text-amber-200 mt-0.5 font-medium">Not joined</p>
         </div>
         <div class="flex gap-2">
-            <button id="btn-player-view" onclick="switchView('player')" class="bg-amber-700 px-3 py-1 rounded text-sm font-semibold">Player</button>
-            <button id="btn-host-view" onclick="switchView('host')" class="bg-amber-800 px-3 py-1 rounded text-sm font-semibold opacity-75">Host View</button>
+            <button id="btn-player-view" onclick="switchView('player')" class="bg-amber-700 px-3 py-1 rounded text-sm font-semibold cursor-pointer">Player</button>
+            <button id="btn-host-view" onclick="switchView('host')" class="bg-amber-800 px-3 py-1 rounded text-sm font-semibold opacity-75 cursor-pointer">Host View</button>
         </div>
     </header>
 
@@ -42,16 +42,16 @@
     <main class="w-full max-w-2xl">
 
         <!-- SCREEN: Join Game -->
-        <div id="screen-join" class="hidden bg-white p-6 rounded-2xl shadow-md border border-amber-200 text-center">
+        <div id="screen-join" class="bg-white p-6 rounded-2xl shadow-md border border-amber-200 text-center">
             <h2 class="text-xl font-bold text-amber-900 mb-2">Enter the Arena</h2>
             <p class="text-sm text-slate-500 mb-4">Choose your nickname to join the queue and challenge the champion.</p>
             <form onsubmit="joinGame(event)" class="flex flex-col gap-3 max-w-xs mx-auto">
                 <input type="text" id="nickname" placeholder="e.g. BUNBOSS" required maxlength="6"
                     oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6)"
                     class="border-2 border-amber-300 p-2.5 rounded-lg focus:outline-none focus:border-amber-600 text-center font-bold text-slate-700 uppercase tracking-widest">
-                <p class="text-xs text-amber-700 font-semibold -mt-1">🕹️ Retro arena rules: letters only, 6 characters max, ALL CAPS — like a high-score board!</p>
+                <p class="text-xs text-amber-700 font-semibold -mt-1">🕹️ Retro arena rules: letters only, 6 characters max, ALL CAPS!</p>
                 <p id="join-error" class="hidden text-red-600 text-xs font-semibold"></p>
-                <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">Join Matchmaking</button>
+                <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow cursor-pointer">Join Matchmaking</button>
             </form>
         </div>
 
@@ -68,7 +68,7 @@
                     
                     <!-- Start Match Manual Trigger -->
                     <div id="start-match-container" class="hidden mt-3">
-                        <button onclick="socket.emit('start_match_manual')" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors shadow">
+                        <button onclick="socket.emit('start_match_manual')" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors shadow cursor-pointer">
                             🚀 Start Match Now
                         </button>
                     </div>
@@ -93,15 +93,15 @@
                     </div>
 
                     <div class="grid grid-cols-3 gap-3 pt-2">
-                        <button onclick="makeChoice('BUN')" class="choice-btn bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 p-4 rounded-xl flex flex-col items-center gap-1 transition-all">
+                        <button onclick="makeChoice('BUN')" class="choice-btn bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 p-4 rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer">
                             <span class="text-3xl">🥯</span>
                             <span class="font-extrabold text-amber-900 text-xs">BUN</span>
                         </button>
-                        <button onclick="makeChoice('CROISSANT')" class="choice-btn bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 p-4 rounded-xl flex flex-col items-center gap-1 transition-all">
+                        <button onclick="makeChoice('CROISSANT')" class="choice-btn bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 p-4 rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer">
                             <span class="text-3xl">🥐</span>
                             <span class="font-extrabold text-amber-900 text-xs">CROISSANT</span>
                         </button>
-                        <button onclick="makeChoice('TORTILLA')" class="choice-btn bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 p-4 rounded-xl flex flex-col items-center gap-1 transition-all">
+                        <button onclick="makeChoice('TORTILLA')" class="choice-btn bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 p-4 rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer">
                             <span class="text-3xl">🫓</span>
                             <span class="font-extrabold text-amber-900 text-xs">TORTILLA</span>
                         </button>
@@ -149,12 +149,6 @@
                             <span id="hm-p1-wins">0</span> - <span id="hm-p2-wins">0</span>
                         </div>
 
-                        <!-- Match Result Overlay Banner -->
-                        <div id="match-result-banner" class="hidden bg-amber-100 border-2 border-amber-400 p-3 rounded-lg text-center space-y-1">
-                            <div id="result-winner-text" class="font-extrabold text-amber-900 text-lg"></div>
-                            <div id="result-choices-display" class="text-xs text-amber-800 font-medium"></div>
-                        </div>
-
                         <!-- Match History -->
                         <div>
                             <h4 class="text-xs font-bold text-slate-400 uppercase mb-2">Round History</h4>
@@ -165,7 +159,7 @@
 
                 <!-- Admin Tools -->
                 <div class="flex justify-end">
-                    <button onclick="resetGame()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">Reset Game State</button>
+                    <button onclick="resetGame()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer">Reset Game State</button>
                 </div>
             </div>
 
@@ -202,7 +196,7 @@
             <p id="reward-desc" class="text-xs text-slate-600"></p>
             <div id="reward-bonus" class="inline-block bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full"></div>
             <div>
-                <button onclick="closeRewardModal()" class="w-full mt-2 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-lg text-sm transition-colors">Continue</button>
+                <button onclick="closeRewardModal()" class="w-full mt-2 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-lg text-sm transition-colors cursor-pointer">Continue</button>
             </div>
         </div>
     </div>
@@ -248,9 +242,13 @@
             getAudioContext();
             document.getElementById('screen-splash').classList.add('hidden');
             
-            if (window.location.pathname === '/host') {
+            // If they already have a saved name, skip join screen and go straight to dashboard
+            if (myName) {
                 document.getElementById('screen-dashboard').classList.remove('hidden');
-            } else if (!myName) {
+                document.getElementById('display-my-name').innerText = `👤 ${myName}`;
+                wasInGame = true;
+                socket.emit('join_game', { name: myName });
+            } else {
                 document.getElementById('screen-join').classList.remove('hidden');
             }
         }
@@ -305,10 +303,7 @@
 
         function triggerVictoryReward(isMatchEnd, roundNum, winnerName) {
             playVictoryMelody();
-            
-            if (navigator.vibrate) {
-                navigator.vibrate([100, 50, 100, 50, 200]);
-            }
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
 
             const modal = document.getElementById('reward-modal');
             const title = document.getElementById('reward-title');
@@ -319,15 +314,14 @@
             if (isMatchEnd) {
                 icon.innerText = "👑🏆";
                 title.innerText = "CHAMPION CROWNED!";
-                desc.innerText = `Incredible victory, ${winnerName}! You claimed ultimate supremacy in the arena!`;
+                desc.innerText = `Incredible victory, ${winnerName}! You claimed ultimate supremacy!`;
                 bonus.innerText = `+150 ESP & Streak Bonus`;
             } else {
                 icon.innerText = "✨";
                 title.innerText = `Round ${roundNum} Won!`;
-                desc.innerText = "Fantastic prediction! You outsmarted your opponent's choice.";
+                desc.innerText = "Fantastic prediction! You outsmarted your opponent.";
                 bonus.innerText = `+50 ESP`;
             }
-
             modal.classList.remove('hidden');
         }
 
@@ -336,14 +330,10 @@
         }
 
         let ticTocInterval = null;
-
         function startTicToc() {
             stopTicToc();
-            ticTocInterval = setInterval(() => {
-                playTicTocSound();
-            }, 1000);
+            ticTocInterval = setInterval(() => playTicTocSound(), 1000);
         }
-
         function stopTicToc() {
             if (ticTocInterval) {
                 clearInterval(ticTocInterval);
@@ -355,23 +345,15 @@
             if (view === 'player') {
                 document.getElementById('view-player').classList.remove('hidden');
                 document.getElementById('view-host').classList.add('hidden');
-                document.getElementById('btn-player-view').className = 'bg-amber-700 px-3 py-1 rounded text-sm font-semibold';
-                document.getElementById('btn-host-view').className = 'bg-amber-800 px-3 py-1 rounded text-sm font-semibold opacity-75';
+                document.getElementById('btn-player-view').className = 'bg-amber-700 px-3 py-1 rounded text-sm font-semibold cursor-pointer';
+                document.getElementById('btn-host-view').className = 'bg-amber-800 px-3 py-1 rounded text-sm font-semibold opacity-75 cursor-pointer';
             } else {
                 document.getElementById('view-player').classList.add('hidden');
                 document.getElementById('view-host').classList.remove('hidden');
-                document.getElementById('btn-host-view').className = 'bg-amber-700 px-3 py-1 rounded text-sm font-semibold';
-                document.getElementById('btn-player-view').className = 'bg-amber-800 px-3 py-1 rounded text-sm font-semibold opacity-75';
+                document.getElementById('btn-host-view').className = 'bg-amber-700 px-3 py-1 rounded text-sm font-semibold cursor-pointer';
+                document.getElementById('btn-player-view').className = 'bg-amber-800 px-3 py-1 rounded text-sm font-semibold opacity-75 cursor-pointer';
             }
         }
-
-        function initHostCheck() {
-            if (window.location.pathname === '/host') {
-                switchView('host');
-            }
-        }
-
-        window.addEventListener('DOMContentLoaded', initHostCheck);
 
         function showJoinError(message) {
             const errEl = document.getElementById('join-error');
@@ -409,19 +391,18 @@
         function makeChoice(choice) {
             stopTicToc();
             playLockInSound();
-            
             socket.emit('make_choice', { choice: choice });
-            document.getElementById('choice-status-badge').className = 'bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold';
-            document.getElementById('choice-status-badge').innerText = `Choice Locked: ${choice}! 🎯`;
             
-            const btns = document.querySelectorAll('.choice-btn');
-            btns.forEach(b => b.classList.add('opacity-50', 'pointer-events-none'));
+            const badge = document.getElementById('choice-status-badge');
+            badge.className = 'bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold';
+            badge.innerText = `Choice Locked: ${choice}! 🎯`;
+            
+            document.querySelectorAll('.choice-btn').forEach(b => b.classList.add('opacity-50', 'pointer-events-none'));
         }
 
         function resetPlayerButtons() {
-            const btns = document.querySelectorAll('.choice-btn');
-            btns.forEach(b => {
-                b.classList.remove('opacity-50', 'pointer-events-none', 'ring-4', 'ring-amber-500');
+            document.querySelectorAll('.choice-btn').forEach(b => {
+                b.classList.remove('opacity-50', 'pointer-events-none');
             });
             const badge = document.getElementById('choice-status-badge');
             if (badge) {
@@ -450,8 +431,6 @@
         });
 
         socket.on('state_update', (state) => {
-            const isHostRoute = window.location.pathname === '/host';
-
             if (pendingJoinName) {
                 const nameIsLive =
                     (state.champion && state.champion.name === pendingJoinName) ||
@@ -462,12 +441,7 @@
                 }
             }
 
-            const splashHidden = document.getElementById('screen-splash').classList.contains('hidden');
-            if (splashHidden && state.game_mode === "WAITING" && !state.champion && state.queue.length === 0 && !isHostRoute) {
-                document.getElementById('screen-dashboard').classList.add('hidden');
-                document.getElementById('screen-join').classList.remove('hidden');
-            }
-
+            // Update Champion data
             if (state.champion) {
                 document.getElementById('host-champ-name').innerText = state.champion.name;
                 document.getElementById('host-champ-streak').innerText = `🔥 ${state.champion.streak}`;
@@ -476,9 +450,9 @@
                 document.getElementById('host-champ-streak').innerText = '🔥 0';
             }
 
+            // Update Queue
             const queueList = document.getElementById('queue-list');
-            const queueCount = document.getElementById('queue-count');
-            queueCount.innerText = `${state.queue.length} waiting`;
+            document.getElementById('queue-count').innerText = `${state.queue.length} waiting`;
             if (state.queue.length === 0) {
                 queueList.innerHTML = `<li class="text-slate-400 text-sm text-center py-2">Queue is empty</li>`;
             } else {
@@ -490,6 +464,7 @@
                 `).join('');
             }
 
+            // Update Leaderboard
             const lbList = document.getElementById('leaderboard-list');
             if (state.leaderboard.length === 0) {
                 lbList.innerHTML = `<li class="text-slate-400 text-sm text-center py-2">No psychic energy detected</li>`;
@@ -497,9 +472,7 @@
                 lbList.innerHTML = state.leaderboard.map((p, idx) => `
                     <li class="flex justify-between items-center text-sm py-1.5 border-b border-slate-100 last:border-0">
                         <span class="font-semibold text-slate-700">${idx === 0 ? '👑 ' : ''}${idx + 1}. ${escapeHtml(p.name)}</span>
-                        <div class="text-right">
-                            <span class="font-bold text-indigo-600">${p.esp_rating} ESP</span>
-                        </div>
+                        <div class="text-right"><span class="font-bold text-indigo-600">${p.esp_rating} ESP</span></div>
                     </li>
                 `).join('');
             }
@@ -541,7 +514,7 @@
                     playerStatusDesc.innerText = "Get ready! Stretch your psychic powers.";
                 } else {
                     playerStatusTitle.innerText = "Ready to Fight!";
-                    playerStatusDesc.innerText = "You are queued up.";
+                    playerStatusDesc.innerText = "Join the queue above to start battling.";
                 }
             } else {
                 startMatchContainer.classList.add('hidden');
@@ -566,18 +539,7 @@
                     document.getElementById('hm-p2-status').className = `mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold ${state.match.p2_choice_made ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700 animate-pulse'}`;
 
                     const history = state.match.history;
-                    let p1PatternMsg = "";
-                    let p2PatternMsg = "";
-                    if (history && history.length >= 2) {
-                        const allP1 = history.every(h => h.p1_choice === history[0].p1_choice);
-                        const allP2 = history.every(h => h.p2_choice === history[0].p2_choice);
-                        if (allP1) p1PatternMsg = `⚠️ Always plays ${history[0].p1_choice}!`;
-                        if (allP2) p2PatternMsg = `⚠️ Always plays ${history[0].p2_choice}!`;
-                    }
-                    document.getElementById('hm-p1-pattern').innerText = p1PatternMsg;
-                    document.getElementById('hm-p2-pattern').innerText = p2PatternMsg;
-
-                    const historyList = document.getElementById('host-history-list');
+                    let historyList = document.getElementById('host-history-list');
                     if (!history || history.length === 0) {
                         historyList.innerHTML = `<span class="text-slate-400 italic">No challenges played yet in this match.</span>`;
                     } else {
@@ -613,8 +575,7 @@
                             const badge = document.getElementById('choice-status-badge');
                             badge.className = 'bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold';
                             badge.innerText = `Choice Locked In! 🎯`;
-                            const btns = document.querySelectorAll('.choice-btn');
-                            btns.forEach(b => b.classList.add('opacity-50', 'pointer-events-none'));
+                            document.querySelectorAll('.choice-btn').forEach(b => b.classList.add('opacity-50', 'pointer-events-none'));
                         } else {
                             resetPlayerButtons();
                             startTicToc();
