@@ -203,6 +203,19 @@
 
     <!-- Script Logic -->
     <script>
+        // Auto-switch to host view if the URL path is /host
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.location.pathname === '/host') {
+                const splash = document.getElementById('screen-splash');
+                if (splash) splash.classList.add('hidden');
+                
+                document.getElementById('screen-join').classList.add('hidden');
+                document.getElementById('screen-dashboard').classList.remove('hidden');
+                
+                switchView('host');
+            }
+        });
+
         const socket = io();
         let currentSid = null;
         let myName = localStorage.getItem('bun_fight_nickname') || '';
