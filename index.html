@@ -333,6 +333,9 @@
         }
 
         function triggerVictoryReward(isMatchEnd, roundNum, winnerName) {
+            // Do not show popups if we are currently looking at the host view
+            if (!document.getElementById('view-host').classList.contains('hidden')) return;
+
             playVictoryMelody();
             if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
 
@@ -357,6 +360,9 @@
         }
 
         function triggerDefeatReward(isMatchEnd, roundNum, winnerName) {
+            // Do not show popups if we are currently looking at the host view
+            if (!document.getElementById('view-host').classList.contains('hidden')) return;
+
             playDefeatMelody();
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
 
