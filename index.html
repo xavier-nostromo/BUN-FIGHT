@@ -244,16 +244,13 @@
             getAudioContext();
         }, { once: true });
 
-        // Function to handle dismissing the splash screen
         function dismissSplash() {
-            getAudioContext(); // Initialize audio context on user interaction
+            getAudioContext();
             document.getElementById('screen-splash').classList.add('hidden');
             
-            // If viewing the host route, keep join screen hidden and show dashboard
             if (window.location.pathname === '/host') {
                 document.getElementById('screen-dashboard').classList.remove('hidden');
             } else if (!myName) {
-                // If normal player and not yet named, show the join screen
                 document.getElementById('screen-join').classList.remove('hidden');
             }
         }
@@ -465,7 +462,6 @@
                 }
             }
 
-            // Only auto-show the join screen if the splash screen has already been cleared
             const splashHidden = document.getElementById('screen-splash').classList.contains('hidden');
             if (splashHidden && state.game_mode === "WAITING" && !state.champion && state.queue.length === 0 && !isHostRoute) {
                 document.getElementById('screen-dashboard').classList.add('hidden');
@@ -594,81 +590,39 @@
                         `).join('');
                     }
 
-                    document.getElementById('match-result-banner').classList.add('hidden');
-
-                    const isChallenger = state.match.challenger_name === myName;
-                    const isChamp = state.match.champ_name === myName;
-
-                    if (isChallenger || isChamp) {
-                        battleControls.classList.remove('hidden');
-                        document.getElementById('match-score-display').innerText = `Round ${state.match.round_num} | Best of 3`;
-                        
-                        const myChoiceMade = isChallenger ? state.match.p1_choice_made : state.match.p2_choice_made;
-                        if (!myChoiceMade) {
-                            resetPlayerButtons();
-                            startTicToc();
-                        } else {
-                            stopTicToc();
-                        }
-
-                        playerStatusTitle.innerText = "⚔️ BATTLE IN PROGRESS!";
-                        playerStatusDesc.innerText = `Fighting against ${isChallenger ? state.match.champ_name : state.match.challenger_name}!`;
-                    } else {
-                        stopTicToc();
-                        battleControls.classList.add('hidden');
-                        playerStatusTitle.innerText = "👀 Spectating Active Match";
-                        playerStatusDesc.innerText = `${state.match.challenger_name} vs ${state.match.champ_name} is underway!`;
-                    }
-                } else if (state.game_mode === "ROUND_OVER" && state.match) {
-                    stopTicToc();
-                    hostInactive.classList.add('hidden');
-                    hostActive.classList.remove('hidden');
-                    battleControls.classList.add('hidden');
-
-                    document.getElementById('hm-p1-status').innerText = "🔒 Locked In";
-                    document.getElementById('hm-p1-status').className = "mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold bg-green-100 text-green-700";
-                    
-                    document.getElementById('hm-p2-status').innerText = "🔒 Locked In";
-                    document.getElementById('hm-p2-status').className = "mt-2 text-xs py-1 px-3 rounded-full inline-block font-semibold bg-green-100 text-green-700";
-
-                    const p1ChoiceStr = emojiMap[state.match.p1_choice] || state.match.p1_choice;
-                    const p2ChoiceStr = emojiMap[state.match.p2_choice] || state.match.p2_choice;
-
-                    const history = state.match.history || [];
-                    const historyList = document.getElementById('host-history-list');
-                    if (history.length > 0) {
-                        historyList.innerHTML = history.map(h => `
-                            <div class="flex justify-between items-center bg-white px-3 py-1.5 rounded border border-slate-200">
-                                <span class="font-bold text-slate-700">Round ${h.round_num}</span>
-                                <span class="text-slate-600">${escapeHtml(state.match.challenger_name)} (${emojiMap[h.p1_choice] || h.p1_choice}) vs ${escapeHtml(state.match.champ_name)} (${emojiMap[h.p2_choice] || h.p2_choice})</span>
-                                <span class="font-extrabold text-amber-700">Winner: ${escapeHtml(h.winner)}</span>
-                            </div>
-                        `).join('');
-                    }
-
-                    const resultBanner = document.getElementById('match-result-banner');
-                    resultBanner.classList.remove('hidden');
-                    document.getElementById('result-choices-display').innerText = `${state.match.challenger_name} (${p1ChoiceStr}) vs ${state.match.champ_name} (${p2ChoiceStr})`;
-
-                    const roundWinner = state.match.match_winner;
-                    if (roundWinner && roundWinner.includes("Tie")) {
-                        document.getElementById('result-winner-text').innerText = "IT'SA TIE!";
-                    } else {
-                        document.getElementById('result-winner-text').innerText = `${roundWinner} Wins Round!`;
-                    }
-
                     if (history.length > lastProcessedHistoryLength) {
                         lastProcessedHistoryLength = history.length;
-                        const lastRound = history[history.length - 1];
-
-                        if (!isHostRoute && lastRound.winner === myName) {
-                            const isMatchEnd = state.match.p1_wins >= 2 || state.match.p2_wins >= 2;
-                            triggerVictoryReward(isMatchEnd, lastRound.round_num, myName);
+                        const latestRound = history[history.length - 1];
+                        if (myName && (state.match.challenger_name === myName || state.match.champ_name === myName)) {
+                            if (latestRound.winner === myName) {
+                                triggerVictoryReward(false, latestRound.round_num, myName);
+                            }
                         }
                     }
 
-                    playerStatusTitle.innerText = "💥 ROUND COMPLETE!";
-                    playerStatusDesc.innerText = "Preparing for the next round...";
+                    const isParticipant = myName && (state.match.challenger_name === myName || state.match.champ_name === myName);
+                    if (isParticipant) {
+                        battleControls.classList.remove('hidden');
+                        const amIChallenger = (state.match.challenger_name === myName);
+                        const myChoiceMade = amIChallenger ? state.match.p1_choice_made : state.match.p2_choice_made;
+                        
+                        document.getElementById('match-score-display').innerText = `Round ${history.length + 1} | Best of 3 (${state.match.p1_wins} - ${state.match.p2_wins})`;
+
+                        if (myChoiceMade) {
+                            stopTicToc();
+                            const badge = document.getElementById('choice-status-badge');
+                            badge.className = 'bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold';
+                            badge.innerText = `Choice Locked In! 🎯`;
+                            const btns = document.querySelectorAll('.choice-btn');
+                            btns.forEach(b => b.classList.add('opacity-50', 'pointer-events-none'));
+                        } else {
+                            resetPlayerButtons();
+                            startTicToc();
+                        }
+                    } else {
+                        battleControls.classList.add('hidden');
+                        stopTicToc();
+                    }
                 }
             }
         });
