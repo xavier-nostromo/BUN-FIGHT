@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 5000;
 // CORS_ORIGIN=https://your-app.onrender.com
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 const MAX_NAME_LENGTH = 6;
-const ROUND_RESULT_DELAY_MS = 3500;
+const ROUND_RESULT_DELAY_MS = 2000; // Shortened to 2 seconds for snappier pacing
 
 const app = express();
 const server = http.createServer(app);
@@ -280,7 +280,10 @@ io.on('connection', (socket) => {
     });
 
     socket.on('make_choice', (data) => {
-        if (!gameState.match || gameState.game_mode !== "MATCH_IN_PROGRESS") return;
+        if (!gameState.match || gameState.game_mode !== "MATCH_IN_PROGRESS") {
+            console.log(`[IGNORED CHOICE] From ${socket.playerName}: game_mode is ${gameState.game_mode}`);
+            return;
+        }
         const choice = data && data.choice;
         if (!['BUN', 'CROISSANT', 'TORTILLA'].includes(choice)) return;
 
@@ -296,7 +299,8 @@ io.on('connection', (socket) => {
             match.p2_choice = choice;
             match.p2_choice_made = true;
         } else {
-            return; // Spectator attempted to play
+            console.log(`[IGNORED CHOICE] Unknown player trying to play: ${name}`);
+            return; 
         }
 
         // Check if both have chosen; if not, broadcast immediately so the UI reflects the lock-in
