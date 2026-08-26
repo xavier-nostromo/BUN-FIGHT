@@ -3,606 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bun Fight Arena 🥯⚔️</title>
+    <title>Bun Fight Arena - Match vs Game Win Mod</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Socket.io Client Library -->
-    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
+        body { font-family: 'Fredoka', sans-serif; }
+    </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center justify-between p-4 font-sans">
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-between p-4">
 
-    <!-- Splash Screen / Welcome Overlay -->
-    <div id="screen-splash" class="fixed inset-0 bg-slate-950 bg-opacity-95 z-50 flex flex-col items-center justify-center p-6 text-center">
-        <div class="text-6xl mb-4 animate-bounce">🥐🥯🫓</div>
-        <h1 class="text-4xl font-extrabold text-amber-500 mb-2">BUN FIGHT ARENA</h1>
-        <p class="text-slate-400 max-w-sm mb-6">Test your psychic predictions in the ultimate carbohydrate battle!</p>
-        <button onclick="dismissSplash()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-8 py-3 rounded-full text-lg shadow-lg transition-transform transform hover:scale-105 cursor-pointer">
-            ENTER ARENA
-        </button>
-    </div>
-
-    <!-- Join Screen (If no nickname stored) -->
-    <div id="screen-join" class="hidden fixed inset-0 bg-slate-900 z-40 flex flex-col items-center justify-center p-6 text-center">
-        <h2 class="text-2xl font-bold text-amber-400 mb-2">Choose Your Fighter Name</h2>
-        <p class="text-slate-400 text-sm mb-6">Max 6 uppercase letters (A-Z)</p>
-        <form onsubmit="joinGame(event)" class="flex flex-col gap-4 w-full max-w-xs">
-            <input type="text" id="nickname" maxlength="6" placeholder="NICKNAME" autocomplete="off"
-                class="bg-slate-800 border-2 border-slate-700 text-center text-xl font-bold tracking-widest text-amber-400 px-4 py-3 rounded-lg focus:outline-none focus:border-amber-500 uppercase">
-            <button type="submit" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg shadow cursor-pointer">
-                JOIN QUEUE
-            </button>
-            <p id="join-error" class="text-red-400 text-sm hidden"></p>
-        </form>
-    </div>
-
-    <!-- Reward Modal -->
-    <div id="reward-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
-            <div id="reward-icon" class="text-5xl mb-3">👑</div>
-            <h3 id="reward-title" class="text-xl font-bold text-amber-400 mb-1">VICTORY!</h3>
-            <p id="reward-desc" class="text-slate-300 text-sm mb-4">You have conquered the round.</p>
-            <div id="reward-bonus" class="bg-amber-950 text-amber-300 font-semibold py-2 rounded-lg mb-6 text-sm">
-                +50 ESP
-            </div>
-            <button onclick="closeRewardModal()" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 rounded-lg cursor-pointer">
-                CONTINUE
-            </button>
-        </div>
-    </div>
-
-    <!-- Main Dashboard -->
-    <div id="screen-dashboard" class="w-full max-w-md flex flex-col gap-4">
-        <!-- Header Info -->
-        <header class="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700 shadow">
-            <div>
-                <span id="display-my-name" class="font-bold text-amber-400">👤 Guest</span>
-                <div class="text-xs text-slate-400">Streak: 🔥 <span id="my-streak">0</span> | ESP: <span id="my-esp">1000</span></div>
-            </div>
-            <div class="flex gap-2">
-                <button onclick="switchView('player')" id="btn-player-view" class="bg-amber-700 px-3 py-1 rounded text-sm font-semibold cursor-pointer">Player</button>
-                <button onclick="switchView('host')" id="btn-host-view" class="bg-amber-800 px-3 py-1 rounded text-sm font-semibold opacity-75 cursor-pointer">Host/View</button>
-            </div>
-        </header>
-
-        <!-- Player View -->
-        <div id="view-player" class="flex flex-col gap-4">
-            <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl text-center shadow">
-                <h3 id="player-status-title" class="text-lg font-bold text-amber-400 mb-1">Ready to Fight!</h3>
-                <p id="player-status-desc" class="text-slate-400 text-sm mb-4">Join the queue or wait for your turn.</p>
-                <div id="choice-status-badge" class="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm inline-block font-medium">
-                    Make your move!
-                </div>
-            </div>
-
-            <!-- Battle Controls (Active when playing) -->
-            <div id="battle-controls" class="hidden flex flex-col gap-3">
-                <div class="grid grid-cols-3 gap-3">
-                    <button onclick="makeChoice('BUN')" class="choice-btn bg-amber-700 hover:bg-amber-600 active:scale-95 transition p-4 rounded-xl font-bold text-center shadow cursor-pointer">
-                        🥯<br>BUN
-                    </button>
-                    <button onclick="makeChoice('TORTILLA')" class="choice-btn bg-yellow-700 hover:bg-yellow-600 active:scale-95 transition p-4 rounded-xl font-bold text-center shadow cursor-pointer">
-                        🫓<br>TORTILLA
-                    </button>
-                    <button onclick="makeChoice('CROISSANT')" class="choice-btn bg-orange-800 hover:bg-orange-700 active:scale-95 transition p-4 rounded-xl font-bold text-center shadow cursor-pointer">
-                        🥐<br>CROISSANT
-                    </button>
-                </div>
+    <!-- Header / Scoreboard Tracker -->
+    <header class="w-full max-w-4xl bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-xl flex justify-between items-center">
+        <!-- Player 1 Status -->
+        <div class="flex flex-col items-start">
+            <span id="p1-name" class="font-bold text-lg text-amber-400">Player 1</span>
+            <div class="flex gap-2 text-xs text-slate-400 mt-1">
+                <span>Match Wins (Sets): <strong id="p1-match-wins" class="text-white text-sm">0</strong></span>
+                <span>| Game Wins (Rounds): <strong id="p1-game-wins" class="text-white text-sm">0/2</strong></span>
             </div>
         </div>
 
-        <!-- Host / Arena View -->
-        <div id="view-host" class="hidden flex flex-col gap-4">
-            <!-- Current Champion Banner -->
-            <div class="bg-gradient-to-r from-amber-900 to-amber-950 border border-amber-600/50 p-4 rounded-xl text-center shadow">
-                <div class="text-xs uppercase tracking-widest text-amber-300 font-semibold mb-1">👑 Current Champion</div>
-                <div id="host-champ-name" class="text-2xl font-black text-amber-400">No Champion Yet</div>
-                <div id="host-champ-streak" class="text-sm text-amber-200 mt-1">🔥 0</div>
+        <!-- Series Info -->
+        <div class="text-center">
+            <span class="bg-indigo-600 text-xs px-3 py-1 rounded-full uppercase tracking-wider font-bold">Best of 3 Series</span>
+            <div id="round-status" class="text-sm text-slate-300 mt-1">Game 1 in Progress</div>
+        </div>
+
+        <!-- Player 2 Status -->
+        <div class="flex flex-col items-end">
+            <span id="p2-name" class="font-bold text-lg text-rose-400">Player 2</span>
+            <div class="flex gap-2 text-xs text-slate-400 mt-1">
+                <span>Game Wins: <strong id="p2-game-wins" class="text-white text-sm">0/2</strong></span>
+                <span>| Match Wins: <strong id="p2-match-wins" class="text-white text-sm">0</strong></span>
             </div>
+        </div>
+    </header>
 
-            <!-- Match Arena Display -->
-            <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl shadow">
-                <h4 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">⚔️ Arena Status</h4>
-                
-                <div id="host-match-inactive" class="text-center py-6 text-slate-400 text-sm">
-                    No match currently underway.
-                    <div id="start-match-container" class="mt-4 hidden">
-                        <button onclick="socket.emit('start_match')" class="bg-green-600 hover:bg-green-500 text-white font-bold px-6 py-2 rounded-lg cursor-pointer text-sm">
-                            START NEXT MATCH 🚀
-                        </button>
-                    </div>
-                </div>
-
-                <div id="host-match-active" class="hidden flex flex-col gap-3">
-                    <div class="flex justify-between items-center bg-slate-900 p-3 rounded-lg border border-slate-700 text-sm">
-                        <div>
-                            <span id="hm-challenger-name" class="font-bold text-amber-400">Challenger</span>
-                            <div id="hm-p1-status" class="text-xs text-slate-400">Choosing...</div>
-                        </div>
-                        <div class="text-center font-black text-lg text-amber-500">
-                            <span id="hm-p1-wins">0</span> - <span id="hm-p2-wins">0</span>
-                        </div>
-                        <div class="text-right">
-                            <span id="hm-champ-name" class="font-bold text-amber-400">Champion</span>
-                            <div id="hm-p2-status" class="text-xs text-slate-400">Choosing...</div>
-                        </div>
-                    </div>
-
-                    <!-- History Log -->
-                    <div class="flex flex-col gap-1.5 max-h-40 overflow-y-auto text-xs" id="host-history-list">
-                        <!-- Populated via JS -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Queue & Leaderboard Grid -->
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-slate-800 border border-slate-700 p-3 rounded-xl shadow">
-                    <div class="flex justify-between items-center mb-2">
-                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Queue</h4>
-                        <span id="queue-count" class="text-xs text-amber-400">0 waiting</span>
-                    </div>
-                    <ul id="queue-list" class="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
-                        <li class="text-slate-400 text-sm text-center py-2">Queue is empty</li>
-                    </ul>
-                </div>
-
-                <div class="bg-slate-800 border border-slate-700 p-3 rounded-xl shadow">
-                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Leaderboard</h4>
-                    <ul id="leaderboard-list" class="flex flex-col gap-1 max-h-40 overflow-y-auto">
-                        <li class="text-slate-400 text-sm text-center py-2">No data</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Admin Reset -->
-            <div class="text-center mt-2">
-                <button onclick="resetGame()" class="text-xs text-red-400 hover:text-red-300 underline cursor-pointer">
-                    Reset Game State
+    <!-- Main Arena View -->
+    <main class="w-full max-w-4xl flex flex-col items-center justify-center my-auto py-8">
+        <div id="arena-card" class="bg-slate-800/80 border border-slate-700 rounded-3xl p-8 shadow-2xl text-center w-full max-w-lg">
+            <h2 id="announcement" class="text-2xl font-bold mb-6 text-indigo-300">Choose Your Bun Attack!</h2>
+            
+            <!-- Choice Buttons -->
+            <div id="action-buttons" class="grid grid-cols-3 gap-4 mb-8">
+                <button onclick="makeChoice('cinnamon')" class="bg-amber-700 hover:bg-amber-600 p-6 rounded-2xl font-bold text-lg transition transform hover:-translate-y-1 shadow-lg flex flex-col items-center gap-2">
+                    🥐 <span>Cinnamon</span>
+                </button>
+                <button onclick="makeChoice('glazed')" class="bg-amber-500 hover:bg-amber-400 text-slate-900 p-6 rounded-2xl font-bold text-lg transition transform hover:-translate-y-1 shadow-lg flex flex-col items-center gap-2">
+                    🍩 <span>Glazed</span>
+                </button>
+                <button onclick="makeChoice('toasted')" class="bg-orange-800 hover:bg-orange-700 p-6 rounded-2xl font-bold text-lg transition transform hover:-translate-y-1 shadow-lg flex flex-col items-center gap-2">
+                    🍞 <span>Toasted</span>
                 </button>
             </div>
+
+            <!-- Result Log Box -->
+            <div id="log-box" class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl text-slate-300 text-sm min-h-[80px] flex items-center justify-center">
+                Make your move to start Game 1 of the series!
+            </div>
         </div>
-    </div>
-<!-- Script Logic -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-xs text-slate-500">
+        Bun Fight Arena &bull; Match vs Game Mod Architecture
+    </footer>
+
+    <!-- Script Logic for Match vs Game Differentiation -->
     <script>
-        window.addEventListener('DOMContentLoaded', () => {
-            if (window.location.pathname === '/host') {
-                const splash = document.getElementById('screen-splash');
-                if (splash) splash.classList.add('hidden');
-                
-                document.getElementById('screen-join').classList.add('hidden');
-                document.getElementById('screen-dashboard').classList.remove('hidden');
-                
-                switchView('host');
+        // Match State Management
+        const matchState = {
+            targetGameWins: 2, // 2 Game wins = 1 Match win (Best of 3)
+            currentGame: 1,
+            players: {
+                player1: { name: "Player 1", gameWins: 0, matchWins: 0 },
+                player2: { name: "Player 2", gameWins: 0, matchWins: 0 }
             }
-        });
-
-        const socket = io({
-            transports: ['websocket'],
-            upgrade: false
-        });
-        
-        let currentSid = null;
-        let myName = localStorage.getItem('bun_fight_nickname') || '';
-        let lastProcessedHistoryLength = 0; 
-        let wasInGame = false; 
-        let pendingJoinName = null;
-        let lastKnownGameNum = 0;
-
-        const emojiMap = { 
-            'BUN': '🥯 BUN', 
-            'TORTILLA': '🫓 TORTILLA', 
-            'CROISSANT': '🥐 CROISSANT' 
         };
 
-        function escapeHtml(str) {
-            const div = document.createElement('div');
-            div.textContent = str == null ? '' : String(str);
-            return div.innerHTML;
-        }
+        const choices = ['cinnamon', 'glazed', 'toasted'];
 
-        function namesMatch(name1, name2) {
-            if (!name1 || !name2) return false;
-            return name1.trim().toUpperCase() === name2.trim().toUpperCase();
-        }
-
-        let audioCtx = null;
-
-        function getAudioContext() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            return audioCtx;
-        }
-
-        window.addEventListener('click', () => {
-            getAudioContext();
-        }, { once: true });
-
-        function dismissSplash() {
-            getAudioContext();
-            document.getElementById('screen-splash').classList.add('hidden');
+        function makeChoice(p1Choice) {
+            // Simulate opponent choice for demonstration
+            const p2Choice = choices[Math.floor(Math.random() * choices.length)];
             
-            if (myName) {
-                document.getElementById('screen-dashboard').classList.remove('hidden');
-                document.getElementById('display-my-name').innerText = `👤 ${myName}`;
-                wasInGame = true;
-                socket.emit('join_game', { name: myName });
+            let roundWinner = null;
+            let logMessage = `You chose <strong>${p1Choice}</strong>. Opponent chose <strong>${p2Choice}</strong>. `;
+
+            if (p1Choice === p2Choice) {
+                logMessage += "It's a tie round! Replaying round.";
+                updateLog(logMessage);
+                return;
+            }
+
+            // Simple win matrix logic
+            if (
+                (p1Choice === 'cinnamon' && p2Choice === 'toasted') ||
+                (p1Choice === 'glazed' && p2Choice === 'cinnamon') ||
+                (p1Choice === 'toasted' && p2Choice === 'glazed')
+            ) {
+                roundWinner = 'player1';
+                logMessage += "<strong>You won this Game round! 🎉</strong>";
             } else {
-                document.getElementById('screen-join').classList.remove('hidden');
+                roundWinner = 'player2';
+                logMessage += "<strong>Opponent won this Game round! ❌</strong>";
+            }
+
+            updateLog(logMessage);
+            handleGameWin(roundWinner);
+        }
+
+        function handleGameWin(winnerKey) {
+            // 1. Increment individual Game Win (Round)
+            matchState.players[winnerKey].gameWins += 1;
+            updateScoreboard();
+
+            // 2. Check if player has hit the target to win the overall Match (Set)
+            if (matchState.players[winnerKey].gameWins >= matchState.targetGameWins) {
+                handleMatchWin(winnerKey);
+            } else {
+                // Advance to the next game in the series
+                matchState.currentGame += 1;
+                document.getElementById('round-status').innerText = `Game ${matchState.currentGame} in Progress`;
             }
         }
 
-        function playTicTocSound() {
-            const ctx = getAudioContext();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(800, ctx.currentTime); 
-            gain.gain.setValueAtTime(0.1, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.08);
-        }
-
-        function playLockInSound() {
-            const ctx = getAudioContext();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(440, ctx.currentTime); 
-            osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); 
-            gain.gain.setValueAtTime(0.2, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.2);
-        }
-
-        function playVictoryMelody() {
-            const ctx = getAudioContext();
-            const now = ctx.currentTime;
-            const notes = [523.25, 659.25, 783.99, 1046.50];
+        function handleMatchWin(winnerKey) {
+            const winnerName = matchState.players[winnerKey].name;
             
-            notes.forEach((freq, i) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(freq, now + (i * 0.15));
-                gain.gain.setValueAtTime(0.25, now + (i * 0.15));
-                gain.gain.exponentialRampToValueAtTime(0.001, now + (i * 0.15) + 0.35);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start(now + (i * 0.15));
-                osc.stop(now + (i * 0.15) + 0.35);
-            });
-        }
-
-        function playDefeatMelody() {
-            const ctx = getAudioContext();
-            const now = ctx.currentTime;
-            const notes = [330, 311, 293, 277];
+            // 1. Increment overall Match Win
+            matchState.players[winnerKey].matchWins += 1;
             
-            notes.forEach((freq, i) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(freq, now + (i * 0.18));
-                gain.gain.setValueAtTime(0.15, now + (i * 0.18));
-                gain.gain.exponentialRampToValueAtTime(0.001, now + (i * 0.18) + 0.3);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start(now + (i * 0.18));
-                osc.stop(now + (i * 0.18) + 0.3);
-            });
-        }
-
-        function triggerVictoryReward(isSeriesEnd, gameNum, winnerName) {
-            if (!document.getElementById('view-host').classList.contains('hidden')) return;
-
-            playVictoryMelody();
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
-
-            const modal = document.getElementById('reward-modal');
-            const title = document.getElementById('reward-title');
-            const desc = document.getElementById('reward-desc');
-            const bonus = document.getElementById('reward-bonus');
-            const icon = document.getElementById('reward-icon');
-
-            if (isSeriesEnd) {
-                icon.innerText = "👑🏆";
-                title.innerText = "SERIES CHAMPION!";
-                desc.innerText = `Incredible run, ${winnerName}! You claimed the ultimate crown!`;
-                bonus.innerText = `+150 ESP & Series Win Bonus`;
-            } else {
-                icon.innerText = "✨🥐";
-                title.innerText = `Game ${gameNum} Victory!`;
-                desc.innerText = "Fantastic prediction! You secured this game point.";
-                bonus.innerText = `+50 ESP`;
-            }
-            modal.classList.remove('hidden');
-        }
-
-        function triggerDefeatReward(isSeriesEnd, gameNum, winnerName) {
-            if (!document.getElementById('view-host').classList.contains('hidden')) return;
-
-            playDefeatMelody();
-            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-
-            const modal = document.getElementById('reward-modal');
-            const title = document.getElementById('reward-title');
-            const desc = document.getElementById('reward-desc');
-            const bonus = document.getElementById('reward-bonus');
-            const icon = document.getElementById('reward-icon');
-
-            if (isSeriesEnd) {
-                icon.innerText = "💥💀";
-                title.innerText = "SERIES LOST";
-                desc.innerText = `${winnerName} took the series crown. Better luck next time!`;
-                bonus.innerText = `ESP Rating Adjusted`;
-            } else {
-                icon.innerText = "❌";
-                title.innerText = `Game ${gameNum} Lost`;
-                desc.innerText = "Keep your head up for the next game point!";
-                bonus.innerText = `Stay focused!`;
-            }
-            modal.classList.remove('hidden');
-        }
-
-        function closeRewardModal() {
-            document.getElementById('reward-modal').classList.add('hidden');
-        }
-
-        let ticTocInterval = null;
-        function startTicToc() {
-            stopTicToc();
-            ticTocInterval = setInterval(() => playTicTocSound(), 1000);
-        }
-        function stopTicToc() {
-            if (ticTocInterval) {
-                clearInterval(ticTocInterval);
-                ticTocInterval = null;
-            }
-        }
-
-        function switchView(view) {
-            if (view === 'player') {
-                document.getElementById('view-player').classList.remove('hidden');
-                document.getElementById('view-host').classList.add('hidden');
-                document.getElementById('btn-player-view').className = 'bg-amber-700 px-3 py-1 rounded text-sm font-semibold cursor-pointer';
-                document.getElementById('btn-host-view').className = 'bg-amber-800 px-3 py-1 rounded text-sm font-semibold opacity-75 cursor-pointer';
-            } else {
-                document.getElementById('view-player').classList.add('hidden');
-                document.getElementById('view-host').classList.remove('hidden');
-                document.getElementById('btn-host-view').className = 'bg-amber-700 px-3 py-1 rounded text-sm font-semibold cursor-pointer';
-                document.getElementById('btn-player-view').className = 'bg-amber-800 px-3 py-1 rounded text-sm font-semibold opacity-75 cursor-pointer';
-            }
-        }
-
-        function showJoinError(message) {
-            const errEl = document.getElementById('join-error');
-            errEl.innerText = message;
-            errEl.classList.remove('hidden');
-        }
-
-        function clearJoinError() {
-            const errEl = document.getElementById('join-error');
-            errEl.classList.add('hidden');
-            errEl.innerText = '';
-        }
-
-        function joinGame(e) {
-            if (e) e.preventDefault();
-            clearJoinError();
-            const inputVal = document.getElementById('nickname').value.trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6);
-            const attemptedName = inputVal || myName;
-            if (!attemptedName) return;
-
-            pendingJoinName = attemptedName;
-            socket.emit('join_game', { name: attemptedName });
-        }
-
-        function confirmJoin(name) {
-            myName = name;
-            pendingJoinName = null;
-            wasInGame = true;
-            localStorage.setItem('bun_fight_nickname', myName);
-            document.getElementById('display-my-name').innerText = `👤 ${myName}`;
-            document.getElementById('screen-join').classList.add('hidden');
-            document.getElementById('screen-dashboard').classList.remove('hidden');
-        }
-
-        function makeChoice(choice) {
-            stopTicToc();
-            playLockInSound();
-            socket.emit('make_choice', { choice: choice });
+            // 2. Announce Match Victory and reset game blocks for the next series
+            alert(`🏆 ${winnerName} has won the entire Match Set! Series resetting.`);
             
-            const badge = document.getElementById('choice-status-badge');
-            badge.className = 'bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold';
-            badge.innerText = `Choice Locked: ${choice}! 🎯`;
+            // Reset game-level tallies for a fresh series, keeping match wins intact
+            matchState.players.player1.gameWins = 0;
+            matchState.players.player2.gameWins = 0;
+            matchState.currentGame = 1;
             
-            document.querySelectorAll('.choice-btn').forEach(b => b.classList.add('opacity-50', 'pointer-events-none'));
+            document.getElementById('round-status').innerText = `New Series Started (Game 1)`;
+            updateScoreboard();
         }
 
-        function resetPlayerButtons() {
-            document.querySelectorAll('.choice-btn').forEach(b => {
-                b.classList.remove('opacity-50', 'pointer-events-none');
-            });
-            const badge = document.getElementById('choice-status-badge');
-            if (badge) {
-                badge.className = 'bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm';
-                badge.innerText = 'Make your move!';
-            }
+        function updateScoreboard() {
+            document.getElementById('p1-game-wins').innerText = `${matchState.players.player1.gameWins}/2`;
+            document.getElementById('p1-match-wins').innerText = matchState.players.player1.matchWins;
+
+            document.getElementById('p2-game-wins').innerText = `${matchState.players.player2.gameWins}/2`;
+            document.getElementById('p2-match-wins').innerText = matchState.players.player2.matchWins;
         }
 
-        function resetGame() {
-            if (confirm("Are you sure you want to reset the game state?")) {
-                socket.emit('reset_game');
-            }
+        function updateLog(htmlText) {
+            document.getElementById('log-box').innerHTML = htmlText;
         }
-
-        socket.on('connect', () => {
-            currentSid = socket.id;
-            if (wasInGame && myName) {
-                pendingJoinName = myName;
-                socket.emit('join_game', { name: myName });
-            }
-        });
-
-        socket.on('join_error', (data) => {
-            pendingJoinName = null;
-            showJoinError((data && data.message) || 'Could not join. Try a different nickname.');
-        });
-
-        socket.on('state_update', (state) => {
-            if (pendingJoinName) {
-                const nameIsLive =
-                    (state.champion && state.champion.name === pendingJoinName) ||
-                    state.queue.some(q => q.name === pendingJoinName) ||
-                    (state.match && (state.match.challenger_name === pendingJoinName || state.match.champ_name === pendingJoinName));
-                if (nameIsLive) {
-                    confirmJoin(pendingJoinName);
-                }
-            }
-
-            if (state.champion) {
-                document.getElementById('host-champ-name').innerText = state.champion.name;
-                document.getElementById('host-champ-streak').innerText = `🔥 ${state.champion.streak}`;
-            } else {
-                document.getElementById('host-champ-name').innerText = 'No Champion Yet';
-                document.getElementById('host-champ-streak').innerText = '🔥 0';
-            }
-
-            const queueList = document.getElementById('queue-list');
-            document.getElementById('queue-count').innerText = `${state.queue.length} waiting`;
-            if (state.queue.length === 0) {
-                queueList.innerHTML = `<li class="text-slate-400 text-sm text-center py-2">Queue is empty</li>`;
-            } else {
-                queueList.innerHTML = state.queue.map((q, idx) => `
-                    <li class="bg-amber-50 px-3 py-2 rounded-lg text-sm font-semibold flex justify-between items-center border border-amber-100">
-                        <span>#${idx + 1} ${escapeHtml(q.name)}</span>
-                        ${q.name === myName ? '<span class="text-xs bg-amber-500 text-white px-2 py-0.5 rounded">You</span>' : ''}
-                    </li>
-                `).join('');
-            }
-
-            const lbList = document.getElementById('leaderboard-list');
-            if (state.leaderboard.length === 0) {
-                lbList.innerHTML = `<li class="text-slate-400 text-sm text-center py-2">No psychic energy detected</li>`;
-            } else {
-                lbList.innerHTML = state.leaderboard.map((p, idx) => `
-                    <li class="flex justify-between items-center text-sm py-1.5 border-b border-slate-100 last:border-0">
-                        <span class="font-semibold text-slate-700">${idx === 0 ? '👑 ' : ''}${idx + 1}. ${escapeHtml(p.name)}</span>
-                        <div class="text-right"><span class="font-bold text-indigo-600">${p.esp_rating} ESP</span></div>
-                    </li>
-                `).join('');
-            }
-
-            const hostInactive = document.getElementById('host-match-inactive');
-            const hostActive = document.getElementById('host-match-active');
-            const battleControls = document.getElementById('battle-controls');
-            const playerStatusTitle = document.getElementById('player-status-title');
-            const playerStatusDesc = document.getElementById('player-status-desc');
-            const startMatchContainer = document.getElementById('start-match-container');
-
-            const me = state.leaderboard.find(p => p.name === myName);
-            if (me) {
-                document.getElementById('my-streak').innerText = me.streak;
-                document.getElementById('my-esp').innerText = me.esp_rating;
-            }
-
-            if (state.game_mode === "WAITING") {
-                stopTicToc();
-                hostInactive.classList.remove('hidden');
-                hostActive.classList.add('hidden');
-                battleControls.classList.add('hidden');
-                
-                lastProcessedHistoryLength = 0;
-                lastKnownGameNum = 0;
-                
-                const qIdx = state.queue.findIndex(q => q.name === myName);
-                const isChamp = state.champion && state.champion.name === myName;
-
-                if (state.champion && state.queue.length > 0) {
-                    startMatchContainer.classList.remove('hidden');
-                } else {
-                    startMatchContainer.classList.add('hidden');
-                }
-
-                if (isChamp) {
-                    playerStatusTitle.innerText = "👑 You are the Champion!";
-                    playerStatusDesc.innerText = "Wait for the next challenger to enter the arena.";
-                } else if (qIdx !== -1) {
-                    playerStatusTitle.innerText = `⏳ Position #${qIdx + 1} in Queue`;
-                    playerStatusDesc.innerText = "Get ready! Stretch your psychic powers.";
-                } else {
-                    playerStatusTitle.innerText = "Ready to Fight!";
-                    playerStatusDesc.innerText = "Join the queue above to start battling.";
-                }
-            } else {
-                startMatchContainer.classList.add('hidden');
-
-                if (state.game_mode === "MATCH_IN_PROGRESS" || state.game_mode === "ROUND_OVER") {
-                    hostInactive.classList.add('hidden');
-                    hostActive.classList.remove('hidden');
-
-                    const isMatchPlayer = state.match && (namesMatch(state.match.challenger_name, myName) || namesMatch(state.match.champ_name, myName));
-                    if (isMatchPlayer && state.game_mode === "MATCH_IN_PROGRESS") {
-                        battleControls.classList.remove('hidden');
-                        
-                        if (state.match.round_num !== lastKnownGameNum) {
-                            resetPlayerButtons();
-                            lastKnownGameNum = state.match.round_num;
-                        }
-                    } else {
-                        battleControls.classList.add('hidden');
-                    }
-
-                    document.getElementById('hm-challenger-name').innerText = state.match.challenger_name;
-                    document.getElementById('hm-champ-name').innerText = state.match.champ_name;
-                    document.getElementById('hm-p1-wins').innerText = state.match.p1_wins;
-                    document.getElementById('hm-p2-wins').innerText = state.match.p2_wins;
-
-                    const p1Locked = state.match.p1_choice_made;
-                    const p2Locked = state.match.p2_choice_made;
-
-                    document.getElementById('hm-p1-status').innerText = p1Locked ? "⚡ Choice Logged" : "🤔 Choosing...";
-                    document.getElementById('hm-p2-status').innerText = p2Locked ? "⚡ Choice Logged" : "🤔 Choosing...";
-
-                    const history = state.match.history || [];
-                    let historyList = document.getElementById('host-history-list');
-                    if (history.length === 0) {
-                        historyList.innerHTML = `<span class="text-slate-400 italic">First-to-2 Series underway. No games finished yet.</span>`;
-                        lastProcessedHistoryLength = 0;
-                    } else {
-                        historyList.innerHTML = history.map(h => `
-                            <div class="flex justify-between items-center bg-white px-3 py-1.5 rounded border border-slate-200">
-                                <span class="font-bold text-slate-700">Game ${h.round_num}</span>
-                                <span class="text-slate-600">${escapeHtml(h.winner)} won (${escapeHtml(h.p1_choice)} vs ${escapeHtml(h.p2_choice)})</span>
-                            </div>
-                        `).join('');
-                    }
-
-                    if (state.game_mode === "ROUND_OVER" && history.length > lastProcessedHistoryLength) {
-                        lastProcessedHistoryLength = history.length;
-                        const latestGame = history[history.length - 1];
-                        const isSeriesEnd = state.match.p1_wins >= 2 || state.match.p2_wins >= 2;
-                        
-                        if (latestGame.winner === myName) {
-                            triggerVictoryReward(isSeriesEnd, latestGame.round_num, latestGame.winner);
-                        } else if (latestGame.winner && latestGame.winner !== "Tie") {
-                            triggerDefeatReward(isSeriesEnd, latestGame.round_num, latestGame.winner);
-                        }
-                    }
-                }
-            }
-        });
     </script>
-    
 </body>
 </html>
